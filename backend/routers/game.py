@@ -46,9 +46,10 @@ def create_game(
         title=request.title,
         description=request.description,
         file_url="",
-        creator_id=int(
-            current_user["sub"]
-        ),
+        creator_id=int(current_user["sub"]),
+        author=current_user["email"],
+        tags="AI,HTML5,Game",
+        cover_url="https://placehold.co/400x250",
         status="GENERATING"
     )
 

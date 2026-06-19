@@ -42,3 +42,18 @@ class Game(Base):
         String,
         default="PENDING"
     )
+
+    author = Column(
+        String,
+        nullable=True
+    )
+
+    tags = Column(
+        String,
+        nullable=True
+    )
+
+    cover_url = Column(
+        String,
+        nullable=True
+    )
