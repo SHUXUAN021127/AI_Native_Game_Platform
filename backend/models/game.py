@@ -57,3 +57,8 @@ class Game(Base):
         String,
         nullable=True
     )
+
+    generation_logs = Column(
+        Text,
+        nullable=True
+    )

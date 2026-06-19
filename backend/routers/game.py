@@ -1,13 +1,15 @@
 import os
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from database.db import SessionLocal
 from models.game import Game
-
+from services.agents.tagger import (
+    generate_tags
+)
 from services.game_generator import generate_game_html
 from services.auth_service import (
     get_current_user
@@ -48,7 +50,7 @@ def create_game(
         file_url="",
         creator_id=int(current_user["sub"]),
         author=current_user["email"],
-        tags="AI,HTML5,Game",
+        tags="",
         cover_url="https://placehold.co/400x250",
         status="GENERATING"
     )
@@ -60,6 +62,19 @@ def create_game(
     db.refresh(game)
 
     try:
+
+        logs = [
+            "🧠 Planner Agent: Analyze Prompt",
+            "🎮 Coding Agent: Generate Game",
+            "🔍 Review Agent: Validate Output",
+            "💾 Storage Agent: Save HTML"
+        ]
+
+        generated_tags = (
+            generate_tags(
+                request.description
+            )
+        )
 
         html_content = generate_game_html(
             request.description
@@ -105,7 +120,13 @@ def create_game(
 
         game.file_url = filename
 
+        game.tags = generated_tags
+
         game.status = "COMPLETED"
+
+        game.generation_logs = (
+            "\n".join(logs)
+        )
 
         db.commit()
 
@@ -161,6 +182,44 @@ def get_my_games(
 
     return games
 
+@router.get("/history")
+def get_generation_history(
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        get_current_user
+    )
+):
+
+    games = (
+        db.query(Game)
+        .filter(
+            Game.creator_id ==
+            int(current_user["sub"])
+        )
+        .order_by(
+            Game.created_at.desc()
+        )
+        .all()
+    )
+
+    return games
+
+@router.get("/recent")
+def get_recent_games(
+    db: Session = Depends(get_db)
+):
+
+    games = (
+        db.query(Game)
+        .order_by(
+            Game.created_at.desc()
+        )
+        .limit(3)
+        .all()
+    )
+
+    return games
+
 @router.get("/{game_id}")
 def get_game(
     game_id: int,
@@ -188,3 +247,46 @@ def get_game(
         "play_url":
             f"/games-files/{game.file_url}"
     }
+
+@router.delete("/{game_id}")
+def delete_game(
+    game_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        get_current_user
+    )
+):
+
+    game = (
+        db.query(Game)
+        .filter(
+            Game.id == game_id
+        )
+        .first()
+    )
+
+    if not game:
+
+        return {
+            "message":
+            "Game not found"
+        }
+
+    if game.creator_id != int(
+        current_user["sub"]
+    ):
+
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden"
+        )
+
+    db.delete(game)
+
+    db.commit()
+
+    return {
+        "message":
+        "Game deleted"
+    }
+

@@ -6,6 +6,7 @@ from models.game import Game
 from routers.game import router as game_router
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from routers.upload import router as upload_router
 
 
 app = FastAPI(
@@ -26,6 +27,18 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+app.include_router(
+    upload_router
+)
+
+app.mount(
+    "/uploads",
+    StaticFiles(
+        directory="../storage/uploads"
+    ),
+    name="uploads"
 )
 
 

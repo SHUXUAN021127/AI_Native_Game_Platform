@@ -8,10 +8,33 @@ export default function Home() {
 
   const [games, setGames] = useState<any[]>([]);
   const [search, setSearch] = useState("");
+  const [recentGames, setRecentGames] = useState([]);
 
   useEffect(() => {
     loadGames();
   }, []);
+
+  useEffect(() => {
+
+    loadGames();
+
+    loadRecentGames();
+
+  }, []);
+
+  async function loadRecentGames() {
+
+      const response =
+        await fetch(
+          "http://127.0.0.1:8000/games/recent"
+        );
+
+      const data =
+        await response.json();
+
+      setRecentGames(data);
+
+    }
 
   async function loadGames() {
     const data = await getGames();
@@ -153,9 +176,36 @@ export default function Home() {
                 {game.description}
               </p>
 
-              <p>
-                🏷️ {game.tags}
-              </p>
+              <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "8px",
+                    marginTop: "12px"
+                  }}
+                >
+                  {
+                    game.tags
+                      ?.split(",")
+                      .map((tag: string) => (
+
+                        <span
+                          key={tag}
+                          style={{
+                            background: "#eef2ff",
+                            color: "#4f46e5",
+                            padding: "4px 10px",
+                            borderRadius: "999px",
+                            fontSize: "12px",
+                            fontWeight: "500"
+                          }}
+                        >
+                          {tag.trim()}
+                        </span>
+
+                      ))
+                  }
+                </div>
 
               <p
                 style={{

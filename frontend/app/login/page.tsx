@@ -4,93 +4,188 @@ import { useState } from "react";
 
 export default function LoginPage() {
 
-  const [email, setEmail] = useState("");
+const [email, setEmail] = useState("");
 
-  const [password, setPassword] = useState("");
+const [password, setPassword] = useState("");
 
-  async function login() {
+const [loading, setLoading] =
+useState(false);
 
-      const formData = new URLSearchParams();
+async function login() {
 
-      formData.append(
-        "username",
-        email
-      );
 
-      formData.append(
-        "password",
-        password
-      );
 
-      const response = await fetch(
-        "http://127.0.0.1:8000/auth/login",
-        {
-          method: "POST",
+try {
 
-          headers: {
-            "Content-Type":
-              "application/x-www-form-urlencoded"
-          },
+  setLoading(true);
 
-          body: formData
-        }
-      );
+  const formData =
+    new URLSearchParams();
 
-      if (!response.ok) {
+  formData.append(
+    "username",
+    email
+  );
 
-        const error =
-          await response.text();
+  formData.append(
+    "password",
+    password
+  );
 
-        console.log(error);
+  const response =
+    await fetch(
+      "http://127.0.0.1:8000/auth/login",
+      {
+        method: "POST",
 
-        alert("Login Failed");
+        headers: {
+          "Content-Type":
+            "application/x-www-form-urlencoded"
+        },
 
-        return;
+        body: formData
       }
+    );
 
-      const data =
-        await response.json();
+  if (!response.ok) {
 
-      localStorage.setItem(
-        "token",
-        data.access_token
-      );
+    alert(
+      "Invalid Email or Password"
+    );
 
-      alert("Login Success");
+    return;
   }
 
-  return (
-    <main style={{ padding: 20 }}>
+  const data =
+    await response.json();
 
-      <h1>Login</h1>
-
-      <input
-        placeholder="Email"
-        value={email}
-        onChange={(e) =>
-          setEmail(e.target.value)
-        }
-      />
-
-      <br />
-      <br />
-
-      <input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) =>
-          setPassword(e.target.value)
-        }
-      />
-
-      <br />
-      <br />
-
-      <button onClick={login}>
-        Login
-      </button>
-
-    </main>
+  localStorage.setItem(
+    "token",
+    data.access_token
   );
+
+  window.location.href = "/";
+
+} finally {
+
+  setLoading(false);
+
+}
+
+
+}
+
+return (
+
+
+<main
+  style={{
+    minHeight: "100vh",
+    background: "#f8fafc",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center"
+  }}
+>
+
+  <div
+    style={{
+      width: "420px",
+      background: "white",
+      padding: "32px",
+      borderRadius: "20px",
+      boxShadow:
+        "0 8px 24px rgba(0,0,0,0.08)"
+    }}
+  >
+
+    <h1
+      style={{
+        textAlign: "center",
+        fontSize: "42px",
+        marginBottom: "10px",
+        background:
+          "linear-gradient(90deg,#6366f1,#8b5cf6)",
+        WebkitBackgroundClip:
+          "text",
+        color: "transparent"
+      }}
+    >
+      Welcome Back
+    </h1>
+
+    <p
+      style={{
+        textAlign: "center",
+        color: "#64748b",
+        marginBottom: "30px"
+      }}
+    >
+      Login to continue
+    </p>
+
+    <input
+      placeholder="Email"
+      value={email}
+      onChange={(e) =>
+        setEmail(
+          e.target.value
+        )
+      }
+      style={{
+        width: "100%",
+        padding: "14px",
+        borderRadius: "12px",
+        border: "1px solid #ddd",
+        marginBottom: "16px"
+      }}
+    />
+
+    <input
+      type="password"
+      placeholder="Password"
+      value={password}
+      onChange={(e) =>
+        setPassword(
+          e.target.value
+        )
+      }
+      style={{
+        width: "100%",
+        padding: "14px",
+        borderRadius: "12px",
+        border: "1px solid #ddd",
+        marginBottom: "20px"
+      }}
+    />
+
+    <button
+      onClick={login}
+      disabled={loading}
+      style={{
+        width: "100%",
+        background:
+          loading
+            ? "#94a3b8"
+            : "linear-gradient(90deg,#6366f1,#8b5cf6)",
+        color: "white",
+        border: "none",
+        padding: "14px",
+        borderRadius: "12px",
+        cursor: "pointer",
+        fontWeight: "bold"
+      }}
+    >
+      {
+        loading
+          ? "⏳ Logging In..."
+          : "🚀 Login"
+      }
+    </button>
+
+  </div>
+
+</main>
+
+);
 }
