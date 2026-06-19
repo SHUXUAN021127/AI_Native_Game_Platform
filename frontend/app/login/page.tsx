@@ -60,9 +60,14 @@ try {
     await response.json();
 
   localStorage.setItem(
-    "token",
-    data.access_token
-  );
+      "token",
+      data.access_token
+    );
+
+  localStorage.setItem(
+      "role",
+      data.role
+    );
 
   window.location.href = "/";
 

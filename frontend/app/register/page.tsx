@@ -10,6 +10,9 @@ export default function RegisterPage() {
   const [password, setPassword] =
     useState("");
 
+  const [role, setRole] =
+    useState("player");
+
   const [loading, setLoading] =
     useState(false);
 
@@ -32,7 +35,8 @@ export default function RegisterPage() {
 
             body: JSON.stringify({
               email,
-              password
+              password,
+              role
             })
           }
         );
@@ -151,9 +155,39 @@ export default function RegisterPage() {
             padding: "14px",
             borderRadius: "12px",
             border: "1px solid #ddd",
-            marginBottom: "20px"
+            marginBottom: "16px"
           }}
         />
+
+        <select
+          value={role}
+          onChange={(e) =>
+            setRole(
+              e.target.value
+            )
+          }
+          style={{
+            width: "100%",
+            padding: "12px",
+            marginBottom: "16px",
+            borderRadius: "10px",
+            border: "1px solid #d1d5db"
+          }}
+        >
+
+          <option value="player">
+            Player
+          </option>
+
+          <option value="creator">
+            Creator
+          </option>
+
+          <option value="admin">
+            Admin
+          </option>
+
+        </select>
 
         <button
           onClick={register}

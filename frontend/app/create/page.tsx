@@ -64,6 +64,28 @@ if (!token) {
 
 }, []);
 
+useEffect(() => {
+
+  const role =
+    localStorage.getItem(
+      "role"
+    );
+
+  if (
+    role !== "creator"
+  ) {
+
+    alert(
+      "Creator only"
+    );
+
+    window.location.href =
+      "/";
+
+  }
+
+}, []);
+
 async function uploadFile() {
 
   if (!file) return;

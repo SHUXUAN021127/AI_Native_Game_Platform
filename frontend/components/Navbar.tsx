@@ -13,6 +13,20 @@ export default function Navbar() {
     setEmail] =
     useState("");
 
+  const [role, setRole] =
+    useState("");
+
+  useEffect(() => {
+
+  const userRole =
+    localStorage.getItem(
+      "role"
+    ) || "";
+
+  setRole(userRole);
+
+  }, []);
+
   useEffect(() => {
 
   checkLogin();
@@ -67,6 +81,10 @@ export default function Navbar() {
 
   localStorage.removeItem(
     "token"
+  );
+
+  localStorage.removeItem(
+    "role"
   );
 
   setLoggedIn(false);
@@ -129,9 +147,15 @@ export default function Navbar() {
             Home
           </Link>
 
-          <Link href="/create">
-            Create
-          </Link>
+          {
+              role === "creator" && (
+
+                <Link href="/create">
+                  Create
+                </Link>
+
+              )
+          }
 
           <Link href="/my-games">
             My Games
