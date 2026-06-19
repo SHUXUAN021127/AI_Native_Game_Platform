@@ -41,12 +41,29 @@ export default function Home() {
     setGames(data);
   }
 
-  const filteredGames = games.filter(
-    (game) =>
+  const filteredGames = games.filter((game) =>
+  {
+    const keyword =
+      search.toLowerCase();
+
+    return (
       game.title
         ?.toLowerCase()
-        .includes(search.toLowerCase())
-  );
+        .includes(keyword)
+
+      ||
+
+      game.description
+        ?.toLowerCase()
+        .includes(keyword)
+
+      ||
+
+      game.tags
+        ?.toLowerCase()
+        .includes(keyword)
+    );
+  });
 
   return (
     <main
@@ -93,36 +110,24 @@ export default function Home() {
         }}
       >
         <input
-          placeholder="🔍 Search games..."
+          type="text"
+          placeholder="🔍 Search by title, tags or description..."
           value={search}
           onChange={(e) =>
-            setSearch(e.target.value)
+            setSearch(
+              e.target.value
+            )
           }
           style={{
-            flex: 1,
-            padding: "14px",
-            borderRadius: "12px",
-            border: "1px solid #ddd",
-            fontSize: "16px",
+            width: "100%",
+            height: "60px",
+            padding: "0 20px",
+            borderRadius: "16px",
+            border: "1px solid #e2e8f0",
+            fontSize: "18px"
           }}
         />
 
-        <Link href="/create">
-          <button
-            style={{
-              background:
-                "linear-gradient(90deg,#6366f1,#8b5cf6)",
-              color: "white",
-              border: "none",
-              padding: "14px 24px",
-              borderRadius: "12px",
-              cursor: "pointer",
-              fontWeight: "bold",
-            }}
-          >
-            🚀 Create Game
-          </button>
-        </Link>
       </div>
 
       <div
@@ -146,15 +151,10 @@ export default function Home() {
           >
             <img
               src={
-                game.cover_url ||
-                "https://placehold.co/600x300?text=AI+Game"
+                game.cover_url
+                  ? `http://127.0.0.1:8000${game.cover_url}`
+                  : "https://placehold.co/400x250"
               }
-              alt={game.title}
-              style={{
-                width: "100%",
-                height: "220px",
-                objectFit: "cover",
-              }}
             />
 
             <div

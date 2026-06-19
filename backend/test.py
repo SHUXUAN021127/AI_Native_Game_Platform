@@ -1,21 +1,6 @@
-from openai import OpenAI
-from config import OPENAI_API_KEY
+from playwright.sync_api import sync_playwright
 
-client = OpenAI(
-    api_key=OPENAI_API_KEY,
-    base_url="http://43.106.115.130:8080/v1"
-)
-
-response = client.chat.completions.create(
-    model="gpt-5.5",
-    messages=[
-        {
-            "role":"user",
-            "content":"hello"
-        }
-    ]
-)
-
-print(
-    response.choices[0].message.content
-)
+with sync_playwright() as p:
+    browser = p.chromium.launch()
+    print("Playwright OK")
+    browser.close()

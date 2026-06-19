@@ -42,6 +42,29 @@ export default function HistoryPage() {
     setHistory(data);
   }
 
+  async function retryGame(
+      gameId: number
+    ) {
+
+      const token =
+        localStorage.getItem(
+          "token"
+        );
+
+      await fetch(
+        `http://127.0.0.1:8000/games/${gameId}/retry`,
+        {
+          method: "POST",
+          headers: {
+            Authorization:
+              `Bearer ${token}`
+          }
+        }
+      );
+
+      loadHistory();
+    }
+
   return (
 
     <main
@@ -181,6 +204,37 @@ export default function HistoryPage() {
                   View Details
                 </button>
 
+                {
+                  game.status ===
+                  "FAILED" && (
+
+                    <button
+                      onClick={() =>
+                        retryGame(
+                          game.id
+                        )
+                      }
+                      style={{
+                        marginLeft: "10px",
+                        border: "none",
+                        borderRadius:
+                          "10px",
+                        padding:
+                          "10px 18px",
+                        background:
+                          "#f59e0b",
+                        color:
+                          "white",
+                        cursor:
+                          "pointer"
+                      }}
+                    >
+                      🔄 Retry
+                    </button>
+
+                  )
+                }
+
                 <details
                   style={{
                     marginTop: "16px"
@@ -228,7 +282,7 @@ export default function HistoryPage() {
                     }
 
                   </div>
-                
+
                 </details>
 
               </div>

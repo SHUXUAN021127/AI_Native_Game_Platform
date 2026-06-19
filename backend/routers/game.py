@@ -14,6 +14,13 @@ from services.game_generator import generate_game_html
 from services.auth_service import (
     get_current_user
 )
+from services.screenshot_service import (
+    capture_screenshots
+)
+
+from services.cover_selector import (
+    select_best_cover
+)
 
 router = APIRouter(
     prefix="/games",
@@ -117,6 +124,44 @@ def create_game(
         ) as f:
 
             f.write(html_content)
+
+        game_url = (
+            f"http://127.0.0.1:8000/games-files/{filename}"
+        )
+
+        screenshots = (
+            capture_screenshots(
+                game_url,
+                f"storage/temp/{game_uuid}"
+            )
+        )
+
+        best_cover = (
+            select_best_cover(
+                screenshots
+            )
+        )
+
+        cover_name = (
+            f"{game_uuid}.png"
+        )
+
+        cover_path = (
+            os.path.join(
+                "storage",
+                "covers",
+                cover_name
+            )
+        )
+
+        os.replace(
+            best_cover,
+            cover_path
+        )
+
+        game.cover_url = (
+            f"/covers/{cover_name}"
+        )
 
         game.file_url = filename
 
@@ -244,8 +289,75 @@ def get_game(
         "description": game.description,
         "status": game.status,
         "creator_id": game.creator_id,
+        "tags": game.tags,
+        "author": game.author,
+        "cover_url": game.cover_url,
         "play_url":
             f"/games-files/{game.file_url}"
+    }
+
+@router.post("/{game_id}/retry")
+def retry_game(
+    game_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        get_current_user
+    )
+):
+
+    game = (
+        db.query(Game)
+        .filter(
+            Game.id == game_id
+        )
+        .first()
+    )
+
+    if not game:
+        return {
+            "message":
+            "Game not found"
+        }
+
+    html_content = generate_game_html(
+        game.description
+    )
+
+    filename = game.file_url
+
+    BASE_DIR = os.path.dirname(
+        os.path.dirname(
+            os.path.abspath(__file__)
+        )
+    )
+
+    storage_dir = os.path.join(
+        BASE_DIR,
+        "..",
+        "storage",
+        "generated_games"
+    )
+
+    file_path = os.path.join(
+        storage_dir,
+        filename
+    )
+
+    with open(
+        file_path,
+        "w",
+        encoding="utf-8"
+    ) as f:
+
+        f.write(html_content)
+
+    game.status = "COMPLETED"
+
+    db.commit()
+
+    return {
+        "message":
+        "Retry success"
     }
 
 @router.delete("/{game_id}")

@@ -8,6 +8,13 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from routers.upload import router as upload_router
 
+import os
+
+os.makedirs(
+    "storage/covers",
+    exist_ok=True
+)
+
 
 app = FastAPI(
     title="AI Native Game Platform"
@@ -39,6 +46,14 @@ app.mount(
         directory="../storage/uploads"
     ),
     name="uploads"
+)
+
+app.mount(
+    "/covers",
+    StaticFiles(
+        directory="storage/covers"
+    ),
+    name="covers"
 )
 
 

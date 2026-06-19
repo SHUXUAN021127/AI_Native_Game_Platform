@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import TagList from "@/components/TagList";
+
 
 export default function GameDetailPage() {
 
@@ -163,41 +165,12 @@ return (
           {game.description}
         </p>
 
-        <div
-          style={{
-            display: "flex",
-            gap: "12px",
-            flexWrap: "wrap",
-            marginBottom: "24px"
-          }}
-        >
-
-          <span
-            style={{
-              background: "#eef2ff",
-              color: "#4f46e5",
-              padding: "8px 14px",
-              borderRadius: "999px"
-            }}
-          >
-            🏷️ {game.tags || "AI Game"}
-          </span>
-
-          <span
-            style={{
-              background: "#f1f5f9",
-              padding: "8px 14px",
-              borderRadius: "999px"
-            }}
-          >
-            👤 Creator #{game.creator_id}
-          </span>
-
-        </div>
+        <TagList tags={game.tags} />
 
         <div
           style={{
-            marginBottom: "30px",
+            marginTop: "18px",
+            marginBottom: "18px",
             fontWeight: "bold",
             fontSize: "18px"
           }}
