@@ -39,5 +39,5 @@ class Game(Base):
 
     created_at = Column(
         DateTime,
-        default=datetime
+        default=datetime.utcnow,
     )

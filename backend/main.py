@@ -4,6 +4,7 @@ from database.db import Base,engine
 from models.user import User
 from models.game import Game
 from routers.game import router as game_router
+from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(
     title="AI Native Game Platform"
@@ -11,6 +12,11 @@ app = FastAPI(
 app.include_router(auth_router)
 app.include_router(game_router)
 
+app.mount(
+    "/games-files",
+    StaticFiles(directory="../storage/generated_games"),
+    name="games-files"
+)
 
 Base.metadata.create_all(bind=engine)
 User.metadata.create_all(bind=engine)
