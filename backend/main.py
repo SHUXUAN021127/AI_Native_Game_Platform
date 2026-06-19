@@ -5,6 +5,8 @@ from models.user import User
 from models.game import Game
 from routers.game import router as game_router
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+
 
 app = FastAPI(
     title="AI Native Game Platform"
@@ -17,6 +19,15 @@ app.mount(
     StaticFiles(directory="../storage/generated_games"),
     name="games-files"
 )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 Base.metadata.create_all(bind=engine)
 User.metadata.create_all(bind=engine)
