@@ -48,6 +48,14 @@ def create_game(
         get_current_user
     )
 ):
+    if (
+            current_user["role"]
+            != "creator"
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Creator only"
+        )
 
     print("Generating Game...")
 

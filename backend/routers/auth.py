@@ -31,6 +31,7 @@ pwd_context = CryptContext(
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
+    role: str
 
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -87,7 +88,8 @@ def register(
     # 创建用户
     user = User(
         email=request.email,
-        password_hash=hashed_password
+        password_hash=hashed_password,
+        role=request.role
     )
 
     db.add(user)
@@ -129,11 +131,13 @@ def login(
     token = create_access_token(
         {
             "sub": str(user.id),
-            "email": user.email
+            "email": user.email,
+            "role": user.role
         }
     )
 
     return {
         "access_token": token,
-        "token_type": "bearer"
+        "token_type": "bearer",
+        "role": user.role
     }

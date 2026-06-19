@@ -28,3 +28,8 @@ class User(Base):
         DateTime,
         default=datetime.utcnow
     )
+
+    role = Column(
+        String,
+        default="player"
+    )
