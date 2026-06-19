@@ -1,64 +1,31 @@
-from openai import OpenAI
-from config import OPENAI_API_KEY
+from services.agents.planner import plan_game
 
-client = OpenAI(
-    api_key=OPENAI_API_KEY,
-    base_url="http://43.106.115.130:8080/v1"
-)
+from services.agents.generator import generate_html
 
-SYSTEM_PROMPT = """
-You are an expert HTML5 game developer.
+from services.agents.reviewer import review_html
 
-Generate a complete playable game.
+def generate_game_html(
+    prompt: str
+):
 
-Requirements:
-- Return ONLY HTML
-- Single HTML file
-- Include CSS
-- Include JavaScript
-- No markdown
-- No explanation
-- No code block
-- No ```html
-- No external libraries
-"""
-
-def clean_html(html: str):
-
-    html = html.replace(
-        "```html",
-        ""
+    plan = plan_game(
+        prompt
     )
+    print("Planner Agent Running")
 
-    html = html.replace(
-        "```",
-        ""
+    html = generate_html(
+        plan
     )
+    print("Generator Agent Running")
 
-    return html.strip()
-
-def generate_game_html(prompt: str):
-
-    response = client.chat.completions.create(
-        model="gpt-5.5",
-        messages=[
-            {
-                "role": "system",
-                "content": SYSTEM_PROMPT
-            },
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
+    valid = review_html(
+        html
     )
+    print("Reviewer Agent Running")
 
-    html_content = (
-        response.choices[0]
-        .message
-        .content
-    )
+    if not valid:
+        raise Exception(
+            "Generated HTML failed review"
+        )
 
-    return clean_html(
-        html_content
-    )
+    return html

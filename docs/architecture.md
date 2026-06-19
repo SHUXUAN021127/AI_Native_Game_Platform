@@ -78,6 +78,24 @@ Storage + Database
 
 ---
 
+## Multi-Agent Workflow
+
+Planner Agent
+
+↓
+
+Generator Agent
+
+↓
+
+Reviewer Agent
+
+↓
+
+Save Game
+
+---
+
 ## Database Design
 
 ### User
