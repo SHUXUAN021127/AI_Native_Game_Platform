@@ -6,6 +6,8 @@ from database.db import SessionLocal
 from models.user import User
 from jose import jwt
 from datetime import datetime, timedelta
+from fastapi.security import OAuth2PasswordRequestForm
+
 
 SECRET_KEY = "your-secret-key"
 
@@ -97,13 +99,13 @@ def register(
 
 @router.post("/login")
 def login(
-    request: LoginRequest,
+    form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
 
     user = (
         db.query(User)
-        .filter(User.email == request.email)
+        .filter(User.email == form_data.username)
         .first()
     )
 
@@ -114,7 +116,7 @@ def login(
         )
 
     valid = pwd_context.verify(
-        request.password,
+        form_data.password,
         user.password_hash
     )
 

@@ -1,12 +1,35 @@
 "use client";
 
 import { useState } from "react";
+import { useEffect } from "react";
 
 export default function CreatePage() {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+    useEffect(() => {
 
-  const [loading, setLoading] = useState(false);
+      const token =
+        localStorage.getItem(
+          "token"
+        );
+
+      if (!token) {
+
+        alert(
+          "Please login first"
+        );
+
+        window.location.href =
+          "/login";
+      }
+
+    }, []);
+    const [title, setTitle] = useState("");
+
+    const [description, setDescription] = useState("");
+
+    const [loading, setLoading] = useState(false);
+
+    const token = localStorage.getItem("token");
+
 
   async function createGame() {
 
@@ -14,13 +37,32 @@ export default function CreatePage() {
 
     setLoading(true);
 
+    const token =
+      localStorage.getItem(
+        "token"
+      );
+    if (!token) {
+
+        alert("Please login first");
+
+        window.location.href = "/login";
+
+        return;
+    }
+
     const response = await fetch(
       "http://127.0.0.1:8000/games",
       {
         method: "POST",
+
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type":
+            "application/json",
+
+          Authorization:
+            `Bearer ${token}`
         },
+
         body: JSON.stringify({
           title,
           description
@@ -34,18 +76,18 @@ export default function CreatePage() {
 
     alert("Game Created!");
 
-  } catch (error) {
+      } catch (error) {
 
-    console.error(error);
+        console.error(error);
 
-    alert("Create Failed");
+        alert("Create Failed");
 
-  } finally {
+      } finally {
 
-    setLoading(false);
+        setLoading(false);
 
-  }
-}
+      }
+    }
 
   return (
     <main style={{ padding: 20 }}>

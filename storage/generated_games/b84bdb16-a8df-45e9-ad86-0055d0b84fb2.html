@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>String Catcher</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: radial-gradient(circle at top, #243b55, #141e30);
+      font-family: Arial, Helvetica, sans-serif;
+      color: #fff;
+    }
+
+    .game-wrap {
+      width: min(94vw, 520px);
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 18px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+      overflow: hidden;
+    }
+
+    header {
+      padding: 16px;
+      text-align: center;
+      background: rgba(0, 0, 0, 0.25);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      letter-spacing: 1px;
+    }
+
+    .hud {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      font-size: 14px;
+    }
+
+    .hud div {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 8px;
+      border-radius: 10px;
+    }
+
+    .target {
+      padding: 12px 16px;
+      text-align: center;
+      font-size: 18px;
+      background: rgba(0, 0, 0, 0.18);
+    }
+
+    .target span {
+      display: inline-block;
+      min-width: 26px;
+      margin: 0 2px;
+      padding: 4px 7px;
+      border-radius: 7px;
+      background: rgba(255, 255, 255, 0.12);
+      color: #ccc;
+      font-weight: bold;
+    }
+
+    .target span.done {
+      background: #20c997;
+      color: #06251c;
+    }
+
+    .target span.next {
+      background: #ffd43b;
+      color: #2b2100;
+      transform: scale(1.08);
+    }
+
+    canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+      background: linear-gradient(#152238, #0f172a);
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      padding: 14px;
+      background: rgba(0, 0, 0, 0.25);
+    }
+
+    button {
+      flex: 1;
+      border: 0;
+      border-radius: 12px;
+      padding: 13px 10px;
+      font-size: 16px;
+      font-weight: bold;
+      color: #0f172a;
+      background: #ffd43b;
+      cursor: pointer;
+      transition: transform 0.08s ease, filter 0.15s ease;
+    }
+
+    button:hover {
+      filter: brightness(1.05);
+    }
+
+    button:active {
+      transform: scale(0.97);
+    }
+
+    .move-btn {
+      background: #74c0fc;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.58);
+      z-index: 10;
+    }
+
+    .panel {
+      width: min(92vw, 420px);
+      text-align: center;
+      padding: 26px;
+      border-radius: 20px;
+      background: #111827;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      box-shadow: 0 20px 70px rgba(0, 0, 0, 0.55);
+    }
+
+    .panel h2 {
+      margin: 0 0 10px;
+      font-size: 30px;
+    }
+
+    .panel p {
+      color: #d1d5db;
+      line-height: 1.45;
+      margin: 10px 0;
+    }
+
+    .panel button {
+      margin-top: 14px;
+      width: 100%;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="game-wrap">
+    <header>
+      <h1>String Catcher</h1>
+      <div class="hud">
+        <div>Score: <strong id="score">0</strong></div>
+        <div>Lives: <strong id="lives">3</strong></div>
+        <div>Level: <strong id="level">1</strong></div>
+      </div>
+    </header>
+
+    <div class="target">
+      Build the string:
+      <div id="targetLetters"></div>
+    </div>
+
+    <canvas id="game" width="520" height="560"></canvas>
+
+    <div class="controls">
+      <button class="move-btn" id="leftBtn">◀ Left</button>
+      <button id="startBtn">Start</button>
+      <button class="move-btn" id="rightBtn">Right ▶</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="panel">
+      <h2 id="overlayTitle">String Catcher</h2>
+      <p id="overlayText">
+        Catch the correct falling character to build the target string.
+        Avoid wrong characters. Use arrow keys, A/D, mouse, touch, or buttons.
+      </p>
+      <button id="overlayBtn">Play</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    const scoreEl = document.getElementById("score");
+    const livesEl = document.getElementById("lives");
+    const levelEl = document.getElementById("level");
+    const targetLettersEl = document.getElementById("targetLetters");
+
+    const startBtn = document.getElementById("startBtn");
+    const leftBtn = document.getElementById("leftBtn");
+    const rightBtn = document.getElementById("rightBtn");
+    const overlay = document.getElementById("overlay");
+    const overlayTitle = document.getElementById("overlayTitle");
+    const overlayText = document.getElementById("overlayText");
+    const overlayBtn = document.getElementById("overlayBtn");
+
+    const words = ["STRING", "ARRAY", "OBJECT", "BOOLEAN", "FUNCTION", "VARIABLE", "PROMISE"];
+
+    let score = 0;
+    let lives = 3;
+    let level = 1;
+    let wordIndex = 0;
+    let target = words[wordIndex];
+    let progress = 0;
+    let running = false;
+    let gameOver = false;
+    let lastTime = 0;
+    let spawnTimer = 0;
+    let spawnDelay = 900;
+    let keys = {};
+    let leftHeld = false;
+    let rightHeld = false;
+    let particles = [];
+
+    const player = {
+      x: canvas.width / 2 - 38,
+      y: canvas.height - 58,
+      w: 76,
+      h: 24,
+      speed: 390
+    };
+
+    let drops = [];
+
+    function updateHud() {
+      scoreEl.textContent = score;
+      livesEl.textContent = lives;
+      levelEl.textContent = level;
+      drawTarget();
+    }
+
+    function drawTarget() {
+      targetLettersEl.innerHTML = "";
+      for (let i = 0; i < target.length; i++) {
+        const span = document.createElement("span");
+        span.textContent = target[i];
+        if (i < progress) span.className = "done";
+        if (i === progress) span.className = "next";
+        targetLettersEl.appendChild(span);
+      }
+    }
+
+    function resetGame() {
+      score = 0;
+      lives = 3;
+      level = 1;
+      wordIndex = 0;
+      target = words[wordIndex];
+      progress = 0;
+      drops = [];
+      particles = [];
+      spawnTimer = 0;
+      spawnDelay = 900;
+      player.x = canvas.width / 2 - player.w / 2;
+      gameOver = false;
+      updateHud();
+    }
+
+    function startGame() {
+      resetGame();
+      running = true;
+      overlay.classList.add("hidden");
+      startBtn.textContent = "Restart";
+      lastTime = performance.now();
+      requestAnimationFrame(loop);
+    }
+
+    function endGame(win) {
+      running = false;
+      gameOver = true;
+      overlay.classList.remove("hidden");
+      overlayTitle.textContent = win ? "You Won!" : "Game Over";
+      overlayText.textContent = win
+        ? "Excellent! You built every string. Final score: " + score
+        : "Wrong characters broke your string. Final score: " + score;
+      overlayBtn.textContent = "Play Again";
+    }
+
+    function nextWord() {
+      score += 50 + level * 10;
+      wordIndex++;
+      if (wordIndex >= words.length) {
+        updateHud();
+        endGame(true);
+        return;
+      }
+      target = words[wordIndex];
+      progress = 0;
+      level++;
+      spawnDelay = Math.max(360, 900 - level * 70);
+      drops = [];
+      burst(canvas.width / 2, canvas.height / 2, "#20c997", 30);
+      updateHud();
+    }
+
+    function randomLetter() {
+      const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      const needed = target[progress];
+      if (Math.random() < 0.45 && needed) return needed;
+      return alphabet[Math.floor(Math.random() * alphabet.length)];
+    }
+
+    function spawnDrop() {
+      const size = 34;
+      drops.push({
+        char: randomLetter(),
+        x: Math.random() * (canvas.width - size),
+        y: -size,
+        size,
+        speed: 105 + level * 24 + Math.random() * 60,
+        rot: Math.random() * Math.PI,
+        spin: (Math.random() - 0.5) * 2
+      });
+    }
+
+    function burst(x, y, color, count) {
+      for (let i = 0; i < count; i++) {
+        particles.push({
+          x,
+          y,
+          vx: (Math.random() - 0.5) * 280,
+          vy: (Math.random() - 0.5) * 280,
+          life: 0.65 + Math.random() * 0.3,
+          color,
+          r: 2 + Math.random() * 4
+        });
+      }
+    }
+
+    function rectsCollide(a, b) {
+      return (
+        a.x < b.x + b.size &&
+        a.x + a.w > b.x &&
+        a.y < b.y + b.size &&
+        a.y + a.h > b.y
+      );
+    }
+
+    function update(dt) {
+      if (keys.ArrowLeft || keys.a || keys.A || leftHeld) player.x -= player.speed * dt;
+      if (keys.ArrowRight || keys.d || keys.D || rightHeld) player.x += player.speed * dt;
+
+      player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
+
+      spawnTimer += dt * 1000;
+      if (spawnTimer >= spawnDelay) {
+        spawnTimer = 0;
+        spawnDrop();
+      }
+
+      for (let i = drops.length - 1; i >= 0; i--) {
+        const d = drops[i];
+        d.y += d.speed * dt;
+        d.rot += d.spin * dt;
+
+        if (rectsCollide(player, d)) {
+          const needed = target[progress];
+
+          if (d.char === needed) {
+            score += 10 * level;
+            progress++;
+            burst(d.x + d.size / 2, d.y + d.size / 2, "#ffd43b", 16);
+            if (progress >= target.length) nextWord();
+          } else {
+            score = Math.max(0, score - 5);
+            lives--;
+            burst(d.x + d.size / 2, d.y + d.size / 2, "#ff6b6b", 18);
+            if (lives <= 0) {
+              updateHud();
+              endGame(false);
+            }
+          }
+
+          drops.splice(i, 1);
+          updateHud();
+          continue;
+        }
+
+        if (d.y > canvas.height + 40) {
+          if (d.char === target[progress]) {
+            lives--;
+            burst(d.x + d.size / 2, canvas.height - 20, "#ff8787", 10);
+            if (lives <= 0) {
+              updateHud();
+              endGame(false);
+            }
+          }
+          drops.splice(i, 1);
+          updateHud();
+        }
+      }
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.life -= dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 260 * dt;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+    }
+
+    function drawBackground() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.strokeStyle = "rgba(116, 192, 252, 0.09)";
+      ctx.lineWidth = 1;
+      for (let x = 0; x < canvas.width; x += 40) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = "rgba(255,255,255,0.06)";
+      ctx.font = "16px monospace";
+      ctx.fillText("const target = \"" + target + "\";", 18, 30);
+      ctx.fillText("nextChar: " + (target[progress] || "✓"), 18, 54);
+    }
+
+    function drawPlayer() {
+      const gradient = ctx.createLinearGradient(player.x, player.y, player.x, player.y + player.h);
+      gradient.addColorStop(0, "#74c0fc");
+      gradient.addColorStop(1, "#228be6");
+
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.roundRect(player.x, player.y, player.w, player.h, 10);
+      ctx.fill();
+
+      ctx.fillStyle = "#d0ebff";
+      ctx.font = "bold 22px monospace";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("_", player.x + player.w / 2, player.y + 7);
+
+      ctx.textAlign = "left";
+      ctx.textBaseline = "alphabetic";
+    }
+
+    function drawDrops() {
+      for (const d of drops) {
+        const needed = d.char === target[progress];
+
+        ctx.save();
+        ctx.translate(d.x + d.size / 2, d.y + d.size / 2);
+        ctx.rotate(d.rot);
+
+        ctx.fillStyle = needed ? "#ffd43b" : "#dee2e6";
+        ctx.strokeStyle = needed ? "#fff3bf" : "#adb5bd";
+        ctx.lineWidth = 2;
+
+        ctx.beginPath();
+        ctx.roundRect(-d.size / 2, -d.size / 2, d.size, d.size, 8);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "#111827";
+        ctx.font = "bold 22px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(d.char, 0, 1);
+
+        ctx.restore();
+      }
+
+      ctx.textAlign = "left";
+      ctx.textBaseline = "alphabetic";
+    }
+
+    function drawParticles() {
+      for (const p of particles) {
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function draw() {
+      drawBackground();
+      drawDrops();
+      drawParticles();
+      drawPlayer();
+    }
+
+    function loop(now) {
+      if (!running) return;
+
+      const dt = Math.min(0.033, (now - lastTime) / 1000);
+      lastTime = now;
+
+      update(dt);
+      draw();
+
+      if (running) requestAnimationFrame(loop);
+    }
+
+    window.addEventListener("keydown", (e) => {
+      keys[e.key] = true;
+      if (["ArrowLeft", "ArrowRight", " "].includes(e.key)) e.preventDefault();
+    });
+
+    window.addEventListener("keyup", (e) => {
+      keys[e.key] = false;
+    });
+
+    canvas.addEventListener("mousemove", (e) => {
+      if (!running) return;
+      const rect = canvas.getBoundingClientRect();
+      const scale = canvas.width / rect.width;
+      player.x = (e.clientX - rect.left) * scale - player.w / 2;
+      player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
+    });
+
+    canvas.addEventListener("touchmove", (e) => {
+      if (!running) return;
+      e.preventDefault();
+      const touch = e.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      const scale = canvas.width / rect.width;
+      player.x = (touch.clientX - rect.left) * scale - player.w / 2;
+      player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
+    }, { passive: false });
+
+    function holdButton(btn, setter) {
+      btn.addEventListener("mousedown", () => setter(true));
+      btn.addEventListener("mouseup", () => setter(false));
+      btn.addEventListener("mouseleave", () => setter(false));
+      btn.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        setter(true);
+      }, { passive: false });
+      btn.addEventListener("touchend", () => setter(false));
+      btn.addEventListener("touchcancel", () => setter(false));
+    }
+
+    holdButton(leftBtn, (v) => leftHeld = v);
+    holdButton(rightBtn, (v) => rightHeld = v);
+
+    startBtn.addEventListener("click", startGame);
+    overlayBtn.addEventListener("click", startGame);
+
+    if (!CanvasRenderingContext2D.prototype.roundRect) {
+      CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+        if (w < 2 * r) r = w / 2;
+        if (h < 2 * r) r = h / 2;
+        this.beginPath();
+        this.moveTo(x + r, y);
+        this.arcTo(x + w, y, x + w, y + h, r);
+        this.arcTo(x + w, y + h, x, y + h, r);
+        this.arcTo(x, y + h, x, y, r);
+        this.arcTo(x, y, x + w, y, r);
+        this.closePath();
+        return this;
+      };
+    }
+
+    updateHud();
+    draw();
+  </script>
+</body>
+</html>

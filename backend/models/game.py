@@ -1,8 +1,4 @@
-from sqlalchemy import Column
-from sqlalchemy import Integer
-from sqlalchemy import String
-from sqlalchemy import Text
-from sqlalchemy import DateTime
+from sqlalchemy import Column, Integer, String, Text, DateTime
 from datetime import datetime
 
 from database.db import Base
@@ -40,4 +36,9 @@ class Game(Base):
     created_at = Column(
         DateTime,
         default=datetime.utcnow,
+    )
+
+    status = Column(
+        String,
+        default="PENDING"
     )

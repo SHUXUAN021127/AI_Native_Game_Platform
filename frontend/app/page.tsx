@@ -35,6 +35,16 @@ export default function Home() {
 
           <p>{game.description}</p>
 
+          <p>
+              Status:{
+                game.status === "COMPLETED"
+                  ? "🟢 COMPLETED"
+                  : game.status === "GENERATING"
+                  ? "🟡 GENERATING"
+                  : "🔴 FAILED"
+              }
+          </p>
+
           <button
             onClick={() =>
               window.open(
