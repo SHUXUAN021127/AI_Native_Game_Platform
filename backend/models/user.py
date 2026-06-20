@@ -33,3 +33,18 @@ class User(Base):
         String,
         default="player"
     )
+
+    provider = Column(
+        String,
+        nullable=True
+    )
+
+    github_id = Column(
+        String,
+        nullable=True
+    )
+
+    avatar_url = Column(
+        String,
+        nullable=True
+    )
