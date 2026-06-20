@@ -143,6 +143,9 @@ def game_to_dict(
         "liked": liked,
 
         "favorited": favorited,
+
+        "generation_logs":
+            game.generation_logs,
     }
 
 
@@ -173,7 +176,14 @@ def create_game(
         author=current_user["email"],
         tags="",
         cover_url="https://placehold.co/400x250",
-        status="GENERATING"
+        status="GENERATING",
+        generation_logs =
+        """
+        🧠 Planner Agent: Analyze Prompt
+        🎮 Coding Agent: Generate Game
+        🔍 Review Agent: Validate Output
+        📦 Storage Agent: Save HTML
+        """
     )
 
     db.add(game)

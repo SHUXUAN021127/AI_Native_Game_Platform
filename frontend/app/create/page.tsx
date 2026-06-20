@@ -456,16 +456,31 @@ return (
             <h3>Document</h3>
 
             <input
+              id="document-upload"
               type="file"
+              hidden
               onChange={(e) =>
                 setFile(
                   e.target.files?.[0] || null
                 )
               }
-              style={{
-                marginTop: "10px"
-              }}
             />
+
+            <label
+              htmlFor="document-upload"
+              style={{
+                display: "inline-block",
+                marginTop: "10px",
+                padding: "8px 14px",
+                borderRadius: "8px",
+                background: "#6366f1",
+                color: "white",
+                cursor: "pointer",
+                fontSize: "14px"
+              }}
+            >
+              📄 Choose File
+            </label>
 
             {
               file && (
@@ -533,8 +548,10 @@ return (
             <h3>Image</h3>
 
             <input
+              id="image-upload"
               type="file"
               accept="image/*"
+              hidden
               onChange={(e) => {
 
                 const selected =
@@ -554,6 +571,21 @@ return (
                 marginTop: "10px"
               }}
             />
+            <label
+              htmlFor="image-upload"
+              style={{
+                display: "inline-block",
+                marginTop: "10px",
+                padding: "8px 14px",
+                borderRadius: "8px",
+                background: "#6366f1",
+                color: "white",
+                cursor: "pointer",
+                fontSize: "14px"
+              }}
+            >
+              🖼 Choose Image
+            </label>
 
             {
               imagePreview && (
@@ -625,8 +657,10 @@ return (
             <h3>Video</h3>
 
             <input
+              id="video-upload"
               type="file"
               accept="video/*"
+              hidden
               onChange={(e) => {
 
                 const selected =
@@ -646,6 +680,21 @@ return (
                 marginTop: "10px"
               }}
             />
+            <label
+              htmlFor="video-upload"
+              style={{
+                display: "inline-block",
+                marginTop: "10px",
+                padding: "8px 14px",
+                borderRadius: "8px",
+                background: "#6366f1",
+                color: "white",
+                cursor: "pointer",
+                fontSize: "14px"
+              }}
+            >
+              🎥 Choose Video
+            </label>
 
             {
               videoPreview && (
