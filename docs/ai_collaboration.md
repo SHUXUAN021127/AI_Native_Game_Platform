@@ -41,7 +41,7 @@ OpenAI-compatible API Endpoint
 
 Estimated Contribution:
 
-70%
+50%
 
 Tasks Assisted By AI:
 
@@ -53,7 +53,7 @@ Tasks Assisted By AI:
 
 Human Contribution:
 
-30%
+50%
 
 Tasks Completed Manually:
 
@@ -184,51 +184,125 @@ Verified:
 
 ## Issue 1
 
-Problem:
+Issue:
+Admin users could not access Creator functions.
 
-localStorage is not defined during SSR.
+Cause:
+Frontend permission checks only allowed role == "creator".
 
 Solution:
-
-Move browser-only logic into useEffect.
+Extended RBAC checks to allow both creator and admin roles.
 
 ---
 
 ## Issue 2
 
-Problem:
+Issue:
+Play count increased from Home page but not from Game Detail page.
 
-Play URL returned undefined.
+Cause:
+Only Home page triggered POST /games/{id}/play.
 
 Solution:
-
-Unified API response through game_to_dict().
-
+Unified play-count logic and added tracking before opening the game from Detail page.
 ---
 
 ## Issue 3
 
-Problem:
+Issue:
+Admin users could not view other users' generation history.
 
-SQLite schema mismatch after adding new fields.
+Cause:
+History API filtered records by creator_id for all roles.
 
 Solution:
-
-Created migration/update scripts and updated database schema.
-
+Added role-based query logic allowing admins to view all records.
 ---
 
 ## Issue 4
 
-Problem:
+Issue:
+History page displayed "Invalid Date".
 
-Generated HTML failed validation.
+Cause:
+created_at field was not returned by game_to_dict().
 
 Solution:
-
-Added Reviewer Agent verification step before publishing.
-
+Added created_at to API response and standardized datetime serialization.
 ---
+
+## Issue 5
+
+Issue:
+Generated cover images returned 404 errors.
+
+Cause:
+Cover directory was not created automatically.
+
+Solution:
+Added startup checks and static file mounting for cover storage.
+---
+
+## Issue 6
+
+Issue:
+localStorage is not defined.
+
+Cause:
+Next.js Server Side Rendering attempted to access browser APIs.
+
+Solution:
+Moved localStorage access into useEffect().
+---
+
+## Issue 7
+
+Issue:
+Current authentication only supports email/password login.
+
+Solution:
+Designed extensible authentication architecture supporting future GitHub and Google OAuth integration.
+---
+
+## Issue 8
+
+Issue:
+Game Detail page returned HTTP 401 Unauthorized.
+
+Cause:
+The endpoint required authenticated users, but the frontend detail page did not send JWT tokens.
+
+Solution:
+Modified authentication strategy and made game details accessible while still supporting user-specific interaction states.
+---
+
+
+## Issue 9
+
+Issue:
+Like and Favorite counts were not synchronized between Home and Detail pages.
+
+Cause:
+Different API responses returned inconsistent fields.
+
+Solution:
+Introduced a unified game_to_dict() serializer and standardized all game-related API responses.
+---
+
+
+## Issue 10
+
+Issue:
+Generated game metadata and cover images became inconsistent after deleting games.
+
+Cause:
+Only database records were removed while generated files remained in local storage.
+
+Solution:
+Extended deletion logic to remove generated HTML files, cover images, likes, and favorite records together.
+---
+
+
 
 # Lessons Learned
 
@@ -236,6 +310,21 @@ Added Reviewer Agent verification step before publishing.
 2. API response standardization reduces frontend complexity.
 3. Early database design significantly reduces refactoring effort.
 4. AI-assisted development can greatly improve implementation speed while still requiring manual review and testing.
+
+---
+
+# Human Review Strategy
+
+All AI-generated outputs were manually reviewed before integration.
+
+Review process:
+
+1. Verify code correctness
+2. Validate API behavior
+3. Perform end-to-end testing
+4. Review generated HTML games
+5. Verify RBAC permissions
+6. Confirm database consistency
 
 ---
 
