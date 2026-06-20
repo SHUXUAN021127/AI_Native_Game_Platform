@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Glow Grid Puzzle</title>
+  <style>
+    :root {
+      --bg1: #111827;
+      --bg2: #312e81;
+      --panel: rgba(255, 255, 255, 0.1);
+      --panel2: rgba(255, 255, 255, 0.16);
+      --text: #f8fafc;
+      --muted: #cbd5e1;
+      --accent: #38bdf8;
+      --good: #34d399;
+      --warn: #f59e0b;
+      --bad: #fb7185;
+      --cellOff: #1e293b;
+      --cellOn: #facc15;
+      --cellOn2: #f97316;
+      --shadow: rgba(0, 0, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 20% 10%, rgba(56, 189, 248, 0.32), transparent 32%),
+        radial-gradient(circle at 85% 20%, rgba(250, 204, 21, 0.2), transparent 28%),
+        linear-gradient(135deg, var(--bg1), var(--bg2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      overflow-x: hidden;
+    }
+
+    .game {
+      width: min(96vw, 520px);
+      background: linear-gradient(180deg, rgba(255,255,255,0.13), rgba(255,255,255,0.07));
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 28px;
+      box-shadow: 0 24px 80px var(--shadow);
+      padding: 22px;
+      backdrop-filter: blur(16px);
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 7vw, 3rem);
+      letter-spacing: -0.06em;
+      line-height: 1;
+    }
+
+    .subtitle {
+      margin: 9px 0 0;
+      color: var(--muted);
+      font-size: 0.98rem;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin: 16px 0;
+    }
+
+    .stat {
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 16px;
+      padding: 10px 8px;
+      text-align: center;
+      min-width: 0;
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.74rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 4px;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 1.18rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .board-wrap {
+      position: relative;
+      background: rgba(0,0,0,0.18);
+      border-radius: 24px;
+      padding: 14px;
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      aspect-ratio: 1 / 1;
+    }
+
+    .cell {
+      border: none;
+      border-radius: 18px;
+      cursor: pointer;
+      background: linear-gradient(145deg, #334155, var(--cellOff));
+      box-shadow:
+        inset 0 2px 0 rgba(255,255,255,0.10),
+        inset 0 -8px 16px rgba(0,0,0,0.24),
+        0 8px 18px rgba(0,0,0,0.22);
+      transition: transform 120ms ease, filter 160ms ease, background 160ms ease, box-shadow 160ms ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cell::after {
+      content: "";
+      position: absolute;
+      inset: 18%;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+      transform: scale(0.55);
+      opacity: 0.35;
+      transition: 160ms ease;
+    }
+
+    .cell.on {
+      background:
+        radial-gradient(circle at 35% 30%, #fff7ad 0 12%, transparent 30%),
+        linear-gradient(145deg, var(--cellOn), var(--cellOn2));
+      box-shadow:
+        0 0 20px rgba(250, 204, 21, 0.55),
+        0 0 44px rgba(249, 115, 22, 0.26),
+        inset 0 2px 0 rgba(255,255,255,0.45),
+        inset 0 -8px 14px rgba(146,64,14,0.35),
+        0 10px 22px rgba(0,0,0,0.24);
+    }
+
+    .cell.on::after {
+      transform: scale(1);
+      opacity: 0.8;
+    }
+
+    .cell:active {
+      transform: scale(0.94);
+    }
+
+    .cell.hint {
+      outline: 4px solid var(--accent);
+      animation: pulse 0.75s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulse {
+      from { filter: brightness(1); transform: scale(1); }
+      to { filter: brightness(1.35); transform: scale(1.045); }
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    button.action {
+      border: 0;
+      border-radius: 16px;
+      padding: 13px 10px;
+      color: white;
+      font-weight: 800;
+      font-size: 0.95rem;
+      cursor: pointer;
+      background: var(--panel2);
+      border: 1px solid rgba(255,255,255,0.15);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.18);
+      transition: transform 120ms ease, filter 160ms ease, background 160ms ease;
+    }
+
+    button.action:hover {
+      filter: brightness(1.12);
+    }
+
+    button.action:active {
+      transform: translateY(2px) scale(0.98);
+    }
+
+    #newGameBtn {
+      background: linear-gradient(135deg, #0ea5e9, #2563eb);
+    }
+
+    #hintBtn {
+      background: linear-gradient(135deg, #a855f7, #7c3aed);
+    }
+
+    #resetBtn {
+      background: linear-gradient(135deg, #475569, #334155);
+    }
+
+    .message {
+      min-height: 52px;
+      margin-top: 16px;
+      padding: 13px 14px;
+      border-radius: 18px;
+      background: rgba(0,0,0,0.17);
+      border: 1px solid rgba(255,255,255,0.11);
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.35;
+    }
+
+    .message b {
+      color: var(--text);
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.72);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 10;
+      backdrop-filter: blur(10px);
+    }
+
+    .overlay.show {
+      display: flex;
+    }
+
+    .modal {
+      width: min(92vw, 430px);
+      background: linear-gradient(180deg, #1e293b, #0f172a);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 26px;
+      padding: 24px;
+      text-align: center;
+      box-shadow: 0 30px 90px rgba(0,0,0,0.55);
+    }
+
+    .modal h2 {
+      margin: 0 0 8px;
+      font-size: 2rem;
+    }
+
+    .modal p {
+      color: var(--muted);
+      margin: 8px 0;
+    }
+
+    .modal .big {
+      font-size: 2.5rem;
+      color: var(--good);
+      font-weight: 900;
+      margin: 12px 0;
+    }
+
+    .modal button {
+      width: 100%;
+      margin-top: 14px;
+      border: 0;
+      border-radius: 16px;
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: 900;
+      color: white;
+      cursor: pointer;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+    }
+
+    .rules {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      text-align: left;
+      background: rgba(0,0,0,0.14);
+      padding: 12px 14px;
+      border-radius: 16px;
+    }
+
+    @media (max-width: 440px) {
+      .game {
+        padding: 16px;
+        border-radius: 22px;
+      }
+
+      .stats {
+        gap: 7px;
+      }
+
+      .stat {
+        padding: 8px 5px;
+        border-radius: 13px;
+      }
+
+      .stat strong {
+        font-size: 0.98rem;
+      }
+
+      .board {
+        gap: 7px;
+      }
+
+      .cell {
+        border-radius: 13px;
+      }
+
+      .controls {
+        gap: 7px;
+      }
+
+      button.action {
+        padding: 12px 5px;
+        font-size: 0.84rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="game" aria-label="Glow Grid Puzzle Game">
+    <header>
+      <h1>Glow Grid</h1>
+      <p class="subtitle">Switch off every glowing tile. Each tap flips a cross.</p>
+    </header>
+
+    <section class="stats" aria-label="Game stats">
+      <div class="stat"><span>Level</span><strong id="level">1</strong></div>
+      <div class="stat"><span>Moves</span><strong id="moves">0</strong></div>
+      <div class="stat"><span>Time</span><strong id="time">0s</strong></div>
+      <div class="stat"><span>Score</span><strong id="score">0</strong></div>
+    </section>
+
+    <section class="board-wrap">
+      <div id="board" class="board" aria-label="Puzzle board"></div>
+    </section>
+
+    <section class="controls">
+      <button class="action" id="newGameBtn">New Game</button>
+      <button class="action" id="hintBtn">Hint -50</button>
+      <button class="action" id="resetBtn">Restart</button>
+    </section>
+
+    <div id="message" class="message">
+      Tap a tile to flip it and its up, down, left, and right neighbors.
+    </div>
+
+    <div class="rules">
+      <b>Goal:</b> turn all lights off. Faster solutions with fewer moves earn more points.
+    </div>
+  </main>
+
+  <div id="overlay" class="overlay">
+    <div class="modal">
+      <h2 id="modalTitle">Level Complete!</h2>
+      <p id="modalText">Great solve.</p>
+      <div class="big" id="modalScore">+0</div>
+      <p id="bestText"></p>
+      <button id="nextBtn">Next Level</button>
+    </div>
+  </div>
+
+  <script>
+    const SIZE = 5;
+    const boardEl = document.getElementById("board");
+    const levelEl = document.getElementById("level");
+    const movesEl = document.getElementById("moves");
+    const timeEl = document.getElementById("time");
+    const scoreEl = document.getElementById("score");
+    const messageEl = document.getElementById("message");
+    const overlay = document.getElementById("overlay");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalText = document.getElementById("modalText");
+    const modalScore = document.getElementById("modalScore");
+    const bestText = document.getElementById("bestText");
+
+    let grid = [];
+    let startGrid = [];
+    let cells = [];
+    let level = 1;
+    let moves = 0;
+    let totalScore = 0;
+    let seconds = 0;
+    let timer = null;
+    let locked = false;
+    let started = false;
+
+    function idx(r, c) {
+      return r * SIZE + c;
+    }
+
+    function emptyGrid() {
+      return Array(SIZE * SIZE).fill(false);
+    }
+
+    function cloneGrid(g) {
+      return g.slice();
+    }
+
+    function toggleOn(g, r, c) {
+      const dirs = [[0,0], [1,0], [-1,0], [0,1], [0,-1]];
+      for (const [dr, dc] of dirs) {
+        const nr = r + dr;
+        const nc = c + dc;
+        if (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE) {
+          g[idx(nr, nc)] = !g[idx(nr, nc)];
+        }
+      }
+    }
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    function generatePuzzle() {
+      let g = emptyGrid();
+      const positions = shuffle([...Array(SIZE * SIZE).keys()]);
+      const presses = Math.min(7 + level * 2, 22);
+
+      for (let i = 0; i < presses; i++) {
+        const p = positions[i % positions.length];
+        toggleOn(g, Math.floor(p / SIZE), p % SIZE);
+      }
+
+      if (g.every(v => !v)) {
+        toggleOn(g, 2, 2);
+        toggleOn(g, 1, 3);
+      }
+
+      return g;
+    }
+
+    function render() {
+      for (let i = 0; i < SIZE * SIZE; i++) {
+        cells[i].classList.toggle("on", grid[i]);
+        cells[i].classList.remove("hint");
+        cells[i].setAttribute("aria-pressed", grid[i] ? "true" : "false");
+      }
+      levelEl.textContent = level;
+      movesEl.textContent = moves;
+      timeEl.textContent = seconds + "s";
+      scoreEl.textContent = totalScore;
+    }
+
+    function createBoard() {
+      boardEl.innerHTML = "";
+      cells = [];
+
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          const button = document.createElement("button");
+          button.className = "cell";
+          button.type = "button";
+          button.setAttribute("aria-label", `Tile row ${r + 1}, column ${c + 1}`);
+          button.addEventListener("click", () => handlePress(r, c));
+          boardEl.appendChild(button);
+          cells.push(button);
+        }
+      }
+    }
+
+    function startTimer() {
+      if (timer) return;
+      timer = setInterval(() => {
+        seconds++;
+        timeEl.textContent = seconds + "s";
+      }, 1000);
+    }
+
+    function stopTimer() {
+      clearInterval(timer);
+      timer = null;
+    }
+
+    function handlePress(r, c) {
+      if (locked) return;
+
+      if (!started) {
+        started = true;
+        startTimer();
+      }
+
+      toggleOn(grid, r, c);
+      moves++;
+      messageEl.innerHTML = `<b>Move ${moves}:</b> keep going until the whole grid is dark.`;
+      render();
+
+      if (isSolved()) {
+        completeLevel();
+      }
+    }
+
+    function isSolved() {
+      return grid.every(v => !v);
+    }
+
+    function levelPoints() {
+      return Math.max(100, 1200 + level * 120 - moves * 32 - seconds * 6);
+    }
+
+    function completeLevel() {
+      locked = true;
+      stopTimer();
+
+      const gained = levelPoints();
+      totalScore += gained;
+
+      const oldBest = Number(localStorage.getItem("glowGridBest") || 0);
+      if (totalScore > oldBest) {
+        localStorage.setItem("glowGridBest", totalScore);
+      }
+
+      render();
+
+      modalTitle.textContent = "Level Complete!";
+      modalText.textContent = `Solved Level ${level} in ${moves} moves and ${seconds} seconds.`;
+      modalScore.textContent = "+" + gained;
+      bestText.textContent = "Best score: " + Math.max(totalScore, oldBest);
+      overlay.classList.add("show");
+    }
+
+    function newLevel(next = true) {
+      overlay.classList.remove("show");
+      locked = false;
+      started = false;
+      stopTimer();
+
+      if (next) level++;
+
+      moves = 0;
+      seconds = 0;
+      grid = generatePuzzle();
+      startGrid = cloneGrid(grid);
+
+      messageEl.innerHTML = `<b>Level ${level}</b> ready. Clear all glowing tiles.`;
+      render();
+    }
+
+    function newGame() {
+      overlay.classList.remove("show");
+      locked = false;
+      started = false;
+      stopTimer();
+
+      level = 1;
+      moves = 0;
+      seconds = 0;
+      totalScore = 0;
+      grid = generatePuzzle();
+      startGrid = cloneGrid(grid);
+
+      messageEl.innerHTML = "<b>New game!</b> Tap a tile to flip it and its neighbors.";
+      render();
+    }
+
+    function restartLevel() {
+      if (locked) return;
+      stopTimer();
+      started = false;
+      seconds = 0;
+      moves = 0;
+      grid = cloneGrid(startGrid);
+      messageEl.innerHTML = `<b>Level ${level} restarted.</b> Try a cleaner solve.`;
+      render();
+    }
+
+    function solveHint(currentGrid) {
+      for (let mask = 0; mask < (1 << SIZE); mask++) {
+        const test = cloneGrid(currentGrid);
+        const solution = [];
+
+        for (let c = 0; c < SIZE; c++) {
+          if ((mask >> c) & 1) {
+            toggleOn(test, 0, c);
+            solution.push(idx(0, c));
+          }
+        }
+
+        for (let r = 1; r < SIZE; r++) {
+          for (let c = 0; c < SIZE; c++) {
+            if (test[idx(r - 1, c)]) {
+              toggleOn(test, r, c);
+              solution.push(idx(r, c));
+            }
+          }
+        }
+
+        let ok = true;
+        for (let c = 0; c < SIZE; c++) {
+          if (test[idx(SIZE - 1, c)]) {
+            ok = false;
+            break;
+          }
+        }
+
+        if (ok && solution.length) return solution[0];
+      }
+
+      return null;
+    }
+
+    function hint() {
+      if (locked) return;
+
+      if (!started) {
+        started = true;
+        startTimer();
+      }
+
+      const h = solveHint(grid);
+      cells.forEach(cell => cell.classList.remove("hint"));
+
+      if (h === null) {
+        messageEl.innerHTML = "No hint found. Restarting may help.";
+        return;
+      }
+
+      totalScore = Math.max(0, totalScore - 50);
+      moves += 1;
+      cells[h].classList.add("hint");
+      const r = Math.floor(h / SIZE) + 1;
+      const c = (h % SIZE) + 1;
+      messageEl.innerHTML = `<b>Hint:</b> try row ${r}, column ${c}. Hint cost: 50 score and 1 move.`;
+
+      render();
+      cells[h].classList.add("hint");
+
+      setTimeout(() => {
+        if (cells[h]) cells[h].classList.remove("hint");
+      }, 3000);
+    }
+
+    document.getElementById("newGameBtn").addEventListener("click", newGame);
+    document.getElementById("resetBtn").addEventListener("click", restartLevel);
+    document.getElementById("hintBtn").addEventListener("click", hint);
+    document.getElementById("nextBtn").addEventListener("click", () => newLevel(true));
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key.toLowerCase() === "r") restartLevel();
+      if (e.key.toLowerCase() === "h") hint();
+      if (e.key.toLowerCase() === "n") newGame();
+      if (e.key === "Enter" && overlay.classList.contains("show")) newLevel(true);
+    });
+
+    createBoard();
+    level = 0;
+    newLevel(true);
+  </script>
+</body>
+</html>

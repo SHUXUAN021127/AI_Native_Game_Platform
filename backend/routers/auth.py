@@ -7,9 +7,7 @@ from models.user import User
 from jose import jwt
 from datetime import datetime, timedelta
 from fastapi.security import OAuth2PasswordRequestForm
-
-
-SECRET_KEY = "your-secret-key"
+from config import SECRET_KEY
 
 ALGORITHM = "HS256"
 

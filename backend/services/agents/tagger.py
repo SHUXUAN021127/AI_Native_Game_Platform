@@ -1,9 +1,12 @@
 from openai import OpenAI
-from config import OPENAI_API_KEY
+from config import (
+    OPENAI_API_KEY,
+    MODEL_BASE_URL
+)
 
 client = OpenAI(
     api_key=OPENAI_API_KEY,
-    base_url="http://43.106.115.130:8080/v1"
+    base_url=MODEL_BASE_URL
 )
 
 SYSTEM_PROMPT = """
