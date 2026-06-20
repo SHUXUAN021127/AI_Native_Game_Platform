@@ -72,7 +72,7 @@ useEffect(() => {
     );
 
   if (
-    role !== "creator"
+    role !== "creator" && role !== "admin"
   ) {
 
     alert(

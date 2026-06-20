@@ -308,11 +308,21 @@ return (
         >
 
           <button
-            onClick={() =>
+            onClick={async () => {
+              await fetch(
+                `http://127.0.0.1:8000/games/${game.id}/play`,
+                {
+                  method: "POST"
+                }
+              );
+
               window.open(
-                `http://127.0.0.1:8000${game.play_url}`
-              )
-            }
+                `http://127.0.0.1:8000${game.play_url}`,
+                "_blank"
+              );
+
+              loadGame();
+            }}
             style={{
               width: "280px",
               height: "70px",

@@ -130,8 +130,15 @@ def game_to_dict(
         "favorite_count":
             favorite_count,
 
+        "created_at":
+            game.created_at.isoformat()
+            if game.created_at
+            else None,
+
         "play_url":
-            f"/games-files/{game.file_url}",
+            f"/games-files/{game.file_url}"
+            if game.file_url
+            else None,
 
         "liked": liked,
 
@@ -380,17 +387,34 @@ def get_generation_history(
     )
 ):
 
-    games = (
-        db.query(Game)
-        .filter(
-            Game.creator_id ==
-            int(current_user["sub"])
+    if (
+        current_user["role"]
+        == "admin"
+    ):
+
+        games = (
+            db.query(Game)
+            .order_by(
+                Game.created_at.desc()
+            )
+            .all()
         )
-        .order_by(
-            Game.created_at.desc()
+
+    else:
+
+        games = (
+            db.query(Game)
+            .filter(
+                Game.creator_id ==
+                int(
+                    current_user["sub"]
+                )
+            )
+            .order_by(
+                Game.created_at.desc()
+            )
+            .all()
         )
-        .all()
-    )
 
     return [
         game_to_dict(
@@ -713,6 +737,57 @@ def delete_game(
             status_code=403,
             detail="Forbidden"
         )
+
+    # delete like records
+
+    db.query(GameLike).filter(
+        GameLike.game_id == game_id
+    ).delete()
+
+    # delete favorite records
+
+    db.query(GameFavorite).filter(
+        GameFavorite.game_id == game_id
+    ).delete()
+
+    # delete .html file
+
+    if game.file_url:
+
+        html_path = os.path.join(
+            "storage",
+            "generated_games",
+            game.file_url
+        )
+
+        if os.path.exists(
+                html_path
+        ):
+            os.remove(
+                html_path
+            )
+
+    # delete cover
+
+    if game.cover_url:
+
+        cover_name = (
+            game.cover_url
+            .split("/")[-1]
+        )
+
+        cover_path = os.path.join(
+            "storage",
+            "covers",
+            cover_name
+        )
+
+        if os.path.exists(
+                cover_path
+        ):
+            os.remove(
+                cover_path
+            )
 
     db.delete(game)
 

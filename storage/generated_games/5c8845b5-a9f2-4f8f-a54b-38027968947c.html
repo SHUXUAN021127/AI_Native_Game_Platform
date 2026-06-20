@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tank Battle</title>
+<style>
+    html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #111;
+        font-family: Arial, Helvetica, sans-serif;
+        color: white;
+        user-select: none;
+    }
+
+    #gameWrap {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        background: radial-gradient(circle at center, #263826 0%, #121b12 100%);
+    }
+
+    canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        cursor: crosshair;
+    }
+
+    #ui {
+        position: absolute;
+        top: 16px;
+        left: 16px;
+        z-index: 10;
+        display: flex;
+        gap: 14px;
+        align-items: center;
+        flex-wrap: wrap;
+        pointer-events: none;
+    }
+
+    .panel {
+        background: rgba(0,0,0,0.55);
+        border: 1px solid rgba(255,255,255,0.18);
+        border-radius: 10px;
+        padding: 10px 14px;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+        backdrop-filter: blur(4px);
+        font-weight: bold;
+    }
+
+    #healthBox {
+        width: 180px;
+    }
+
+    #healthText {
+        margin-bottom: 6px;
+        font-size: 14px;
+    }
+
+    #healthBarOuter {
+        height: 13px;
+        background: #321;
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.25);
+    }
+
+    #healthBar {
+        height: 100%;
+        width: 100%;
+        background: linear-gradient(90deg, #22d65b, #e1e83c);
+        transition: width 0.15s linear;
+    }
+
+    #help {
+        position: absolute;
+        right: 16px;
+        top: 16px;
+        z-index: 10;
+        background: rgba(0,0,0,0.55);
+        border: 1px solid rgba(255,255,255,0.18);
+        border-radius: 10px;
+        padding: 12px 14px;
+        line-height: 1.45;
+        font-size: 14px;
+        color: #e8e8e8;
+        pointer-events: none;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+    }
+
+    #centerMessage {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 20;
+        text-align: center;
+        background: rgba(0,0,0,0.72);
+        border: 1px solid rgba(255,255,255,0.22);
+        border-radius: 18px;
+        padding: 28px 34px;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+        min-width: 300px;
+    }
+
+    #centerMessage h1 {
+        margin: 0 0 10px;
+        letter-spacing: 1px;
+        color: #7cff7c;
+    }
+
+    #centerMessage p {
+        margin: 8px 0;
+        color: #ddd;
+    }
+
+    #startBtn {
+        margin-top: 16px;
+        border: 0;
+        border-radius: 10px;
+        padding: 12px 22px;
+        background: linear-gradient(#76ff76, #1cae31);
+        color: #071507;
+        font-weight: bold;
+        font-size: 16px;
+        cursor: pointer;
+        box-shadow: 0 6px 0 #0d6419;
+    }
+
+    #startBtn:active {
+        transform: translateY(4px);
+        box-shadow: 0 2px 0 #0d6419;
+    }
+
+    .hidden {
+        display: none;
+    }
+</style>
+</head>
+<body>
+<div id="gameWrap">
+    <canvas id="game"></canvas>
+
+    <div id="ui">
+        <div class="panel">Score: <span id="score">0</span></div>
+        <div class="panel">Wave: <span id="wave">1</span></div>
+        <div class="panel" id="healthBox">
+            <div id="healthText">Health: <span id="health">100</span>%</div>
+            <div id="healthBarOuter"><div id="healthBar"></div></div>
+        </div>
+    </div>
+
+    <div id="help">
+        Move: WASD / Arrow Keys<br>
+        Aim: Mouse<br>
+        Shoot: Left Click / Hold<br>
+        Restart: R
+    </div>
+
+    <div id="centerMessage">
+        <h1>TANK BATTLE</h1>
+        <p>Drive your tank with the keyboard.</p>
+        <p>Aim with the mouse and click to shoot.</p>
+        <p>Destroy enemy tanks to score points.</p>
+        <button id="startBtn">Start Game</button>
+    </div>
+</div>
+
+<script>
+(() => {
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    const scoreEl = document.getElementById("score");
+    const waveEl = document.getElementById("wave");
+    const healthEl = document.getElementById("health");
+    const healthBar = document.getElementById("healthBar");
+    const centerMessage = document.getElementById("centerMessage");
+    const startBtn = document.getElementById("startBtn");
+
+    let W = 0;
+    let H = 0;
+    let running = false;
+    let gameOver = false;
+    let lastTime = 0;
+    let score = 0;
+    let wave = 1;
+    let enemySpawnTimer = 0;
+    let mouseDown = false;
+
+    const keys = {};
+    const mouse = { x: 0, y: 0 };
+
+    const player = {
+        x: 400,
+        y: 300,
+        r: 24,
+        angle: 0,
+        turretAngle: 0,
+        speed: 210,
+        turnSmooth: 0.14,
+        health: 100,
+        maxHealth: 100,
+        reload: 0,
+        reloadTime: 0.18,
+        invuln: 0
+    };
+
+    const bullets = [];
+    const enemies = [];
+    const particles = [];
+    const enemyBullets = [];
+    const obstacles = [];
+
+    function resize() {
+        W = canvas.width = window.innerWidth;
+        H = canvas.height = window.innerHeight;
+    }
+
+    window.addEventListener("resize", resize);
+    resize();
+
+    function clamp(v, min, max) {
+        return Math.max(min, Math.min(max, v));
+    }
+
+    function dist(a, b) {
+        const dx = a.x - b.x;
+        const dy = a.y - b.y;
+        return Math.hypot(dx, dy);
+    }
+
+    function angleTo(a, b) {
+        return Math.atan2(b.y - a.y, b.x - a.x);
+    }
+
+    function rand(min, max) {
+        return Math.random() * (max - min) + min;
+    }
+
+    function resetGame() {
+        score = 0;
+        wave = 1;
+        bullets.length = 0;
+        enemies.length = 0;
+        particles.length = 0;
+        enemyBullets.length = 0;
+        obstacles.length = 0;
+
+        player.x = W / 2;
+        player.y = H / 2;
+        player.angle = 0;
+        player.turretAngle = 0;
+        player.health = player.maxHealth;
+        player.reload = 0;
+        player.invuln = 1;
+
+        enemySpawnTimer = 0;
+        gameOver = false;
+        running = true;
+        lastTime = performance.now();
+
+        createObstacles();
+        updateUI();
+        centerMessage.classList.add("hidden");
+
+        requestAnimationFrame(loop);
+    }
+
+    function createObstacles() {
+        const count = Math.floor(Math.min(W, H) / 170) + 4;
+        for (let i = 0; i < count; i++) {
+            let o;
+            let attempts = 0;
+            do {
+                attempts++;
+                o = {
+                    x: rand(80, W - 80),
+                    y: rand(90, H - 80),
+                    w: rand(55, 120),
+                    h: rand(38, 90)
+                };
+            } while (Math.hypot(o.x - player.x, o.y - player.y) < 180 && attempts < 30);
+            obstacles.push(o);
+        }
+    }
+
+    function updateUI() {
+        scoreEl.textContent = score;
+        waveEl.textContent = wave;
+        healthEl.textContent = Math.max(0, Math.round(player.health));
+        healthBar.style.width = clamp(player.health, 0, 100) + "%";
+        if (player.health > 60) {
+            healthBar.style.background = "linear-gradient(90deg, #22d65b, #e1e83c)";
+        } else if (player.health > 30) {
+            healthBar.style.background = "linear-gradient(90deg, #e1e83c, #ff9d2e)";
+        } else {
+            healthBar.style.background = "linear-gradient(90deg, #ff512e, #b30000)";
+        }
+    }
+
+    function shoot() {
+        if (player.reload > 0 || !running || gameOver) return;
+
+        const a = player.turretAngle;
+        const muzzleX = player.x + Math.cos(a) * 34;
+        const muzzleY = player.y + Math.sin(a) * 34;
+
+        bullets.push({
+            x: muzzleX,
+            y: muzzleY,
+            vx: Math.cos(a) * 650,
+            vy: Math.sin(a) * 650,
+            r: 5,
+            life: 1.2,
+            damage: 35
+        });
+
+        createParticles(muzzleX, muzzleY, "#ffd35c", 8, 1.8);
+        player.reload = player.reloadTime;
+    }
+
+    function enemyShoot(enemy) {
+        const a = angleTo(enemy, player);
+        enemyBullets.push({
+            x: enemy.x + Math.cos(a) * 28,
+            y: enemy.y + Math.sin(a) * 28,
+            vx: Math.cos(a) * 330,
+            vy: Math.sin(a) * 330,
+            r: 5,
+            life: 3,
+            damage: 10
+        });
+        createParticles(enemy.x + Math.cos(a) * 28, enemy.y + Math.sin(a) * 28, "#ff8060", 5, 1.5);
+    }
+
+    function createEnemy() {
+        let side = Math.floor(rand(0, 4));
+        let x, y;
+        if (side === 0) { x = rand(0, W); y = -40; }
+        if (side === 1) { x = W + 40; y = rand(0, H); }
+        if (side === 2) { x = rand(0, W); y = H + 40; }
+        if (side === 3) { x = -40; y = rand(0, H); }
+
+        const typeRoll = Math.random();
+        const fast = typeRoll > 0.72;
+        const heavy = typeRoll < 0.18 && wave > 2;
+
+        enemies.push({
+            x,
+            y,
+            r: heavy ? 29 : fast ? 19 : 23,
+            speed: heavy ? rand(60, 85) + wave * 2 : fast ? rand(135, 165) + wave * 3 : rand(85, 115) + wave * 2,
+            health: heavy ? 95 + wave * 8 : fast ? 45 + wave * 4 : 65 + wave * 6,
+            maxHealth: heavy ? 95 + wave * 8 : fast ? 45 + wave * 4 : 65 + wave * 6,
+            angle: 0,
+            turretAngle: 0,
+            reload: rand(0.5, 1.5),
+            reloadTime: heavy ? 1.4 : fast ? 1.8 : 1.55,
+            color: heavy ? "#8a3434" : fast ? "#b98c2e" : "#b04545",
+            value: heavy ? 35 : fast ? 25 : 20
+        });
+    }
+
+    function createParticles(x, y, color, count, speedMul = 1) {
+        for (let i = 0; i < count; i++) {
+            const a = rand(0, Math.PI * 2);
+            const s = rand(40, 180) * speedMul;
+            particles.push({
+                x,
+                y,
+                vx: Math.cos(a) * s,
+                vy: Math.sin(a) * s,
+                r: rand(2, 5),
+                life: rand(0.25, 0.75),
+                maxLife: 0.75,
+                color
+            });
+        }
+    }
+
+    function explode(x, y, size = 1) {
+        createParticles(x, y, "#ffda62", 18 * size, 1.5);
+        createParticles(x, y, "#ff6d3a", 16 * size, 1.2);
+        createParticles(x, y, "#777", 12 * size, 0.9);
+    }
+
+    function collideCircleRect(c, r) {
+        const closestX = clamp(c.x, r.x - r.w / 2, r.x + r.w / 2);
+        const closestY = clamp(c.y, r.y - r.h / 2, r.y + r.h / 2);
+        const dx = c.x - closestX;
+        const dy = c.y - closestY;
+        return dx * dx + dy * dy < c.r * c.r;
+    }
+
+    function resolveObstacleCollision(obj) {
+        for (const o of obstacles) {
+            if (collideCircleRect(obj, o)) {
+                const left = o.x - o.w / 2;
+                const right = o.x + o.w / 2;
+                const top = o.y - o.h / 2;
+                const bottom = o.y + o.h / 2;
+
+                const pushLeft = Math.abs(obj.x + obj.r - left);
+                const pushRight = Math.abs(right - (obj.x - obj.r));
+                const pushTop = Math.abs(obj.y + obj.r - top);
+                const pushBottom = Math.abs(bottom - (obj.y - obj.r));
+
+                const minPush = Math.min(pushLeft, pushRight, pushTop, pushBottom);
+
+                if (minPush === pushLeft) obj.x = left - obj.r;
+                else if (minPush === pushRight) obj.x = right + obj.r;
+                else if (minPush === pushTop) obj.y = top - obj.r;
+                else obj.y = bottom + obj.r;
+            }
+        }
+    }
+
+    function bulletHitsObstacle(b) {
+        for (const o of obstacles) {
+            if (collideCircleRect(b, o)) return true;
+        }
+        return false;
+    }
+
+    function update(dt) {
+        if (!running) return;
+
+        wave = 1 + Math.floor(score / 250);
+
+        player.reload -= dt;
+        player.invuln -= dt;
+
+        let mx = 0;
+        let my = 0;
+        if (keys["w"] || keys["arrowup"]) my -= 1;
+        if (keys["s"] || keys["arrowdown"]) my += 1;
+        if (keys["a"] || keys["arrowleft"]) mx -= 1;
+        if (keys["d"] || keys["arrowright"]) mx += 1;
+
+        if (mx !== 0 || my !== 0) {
+            const len = Math.hypot(mx, my);
+            mx /= len;
+            my /= len;
+
+            player.x += mx * player.speed * dt;
+            player.y += my * player.speed * dt;
+
+            const targetAngle = Math.atan2(my, mx);
+            let diff = Math.atan2(Math.sin(targetAngle - player.angle), Math.cos(targetAngle - player.angle));
+            player.angle += diff * player.turnSmooth;
+        }
+
+        player.x = clamp(player.x, player.r, W - player.r);
+        player.y = clamp(player.y, player.r, H - player.r);
+        resolveObstacleCollision(player);
+
+        player.turretAngle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+
+        if (mouseDown) shoot();
+
+        enemySpawnTimer -= dt;
+        const maxEnemies = 5 + wave * 2;
+        if (enemySpawnTimer <= 0 && enemies.length < maxEnemies) {
+            createEnemy();
+            enemySpawnTimer = Math.max(0.35, 1.25 - wave * 0.06);
+        }
+
+        for (let i = bullets.length - 1; i >= 0; i--) {
+            const b = bullets[i];
+            b.x += b.vx * dt;
+            b.y += b.vy * dt;
+            b.life -= dt;
+
+            if (b.life <= 0 || b.x < -50 || b.x > W + 50 || b.y < -50 || b.y > H + 50 || bulletHitsObstacle(b)) {
+                bullets.splice(i, 1);
+                continue;
+            }
+
+            for (let j = enemies.length - 1; j >= 0; j--) {
+                const e = enemies[j];
+                if (Math.hypot(b.x - e.x, b.y - e.y) < b.r + e.r) {
+                    e.health -= b.damage;
+                    bullets.splice(i, 1);
+                    createParticles(b.x, b.y, "#ffcf57", 7, 1.1);
+
+                    if (e.health <= 0) {
+                        score += e.value;
+                        explode(e.x, e.y, 2);
+                        enemies.splice(j, 1);
+                    }
+                    break;
+                }
+            }
+        }
+
+        for (let i = enemyBullets.length - 1; i >= 0; i--) {
+            const b = enemyBullets[i];
+            b.x += b.vx * dt;
+            b.y += b.vy * dt;
+            b.life -= dt;
+
+            if (b.life <= 0 || b.x < -80 || b.x > W + 80 || b.y < -80 || b.y > H + 80 || bulletHitsObstacle(b)) {
+                enemyBullets.splice(i, 1);
+                continue;
+            }
+
+            if (Math.hypot(b.x - player.x, b.y - player.y) < b.r + player.r) {
+                enemyBullets.splice(i, 1);
+                if (player.invuln <= 0) {
+                    player.health -= b.damage;
+                    player.invuln = 0.15;
+                    createParticles(player.x, player.y, "#ff4b32", 10, 1.3);
+                }
+            }
+        }
+
+        for (const e of enemies) {
+            const a = angleTo(e, player);
+            e.angle = a;
+            e.turretAngle = a;
+
+            const d = Math.hypot(player.x - e.x, player.y - e.y);
+            const desiredRange = 260;
+
+            if (d > desiredRange) {
+                e.x += Math.cos(a) * e.speed * dt;
+                e.y += Math.sin(a) * e.speed * dt;
+            } else if (d < 150) {
+                e.x -= Math.cos(a) * e.speed * 0.7 * dt;
+                e.y -= Math.sin(a) * e.speed * 0.7 * dt;
+            } else {
+                e.x += Math.cos(a + Math.PI / 2) * e.speed * 0.35 * dt;
+                e.y += Math.sin(a + Math.PI / 2) * e.speed * 0.35 * dt;
+            }
+
+            e.x = clamp(e.x, e.r, W - e.r);
+            e.y = clamp(e.y, e.r, H - e.r);
+            resolveObstacleCollision(e);
+
+            e.reload -= dt;
+            if (e.reload <= 0 && d < 620) {
+                enemyShoot(e);
+                e.reload = e.reloadTime + rand(-0.25, 0.35);
+            }
+
+            if (d < e.r + player.r) {
+                const push = (e.r + player.r - d) / 2;
+                const nx = (player.x - e.x) / (d || 1);
+                const ny = (player.y - e.y) / (d || 1);
+                player.x += nx * push;
+                player.y += ny * push;
+                e.x -= nx * push;
+                e.y -= ny * push;
+
+                if (player.invuln <= 0) {
+                    player.health -= 8;
+                    player.invuln = 0.45;
+                    createParticles(player.x, player.y, "#ff4b32", 8, 1);
+                }
+            }
+        }
+
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            p.vx *= 0.96;
+            p.vy *= 0.96;
+            p.life -= dt;
+            if (p.life <= 0) particles.splice(i, 1);
+        }
+
+        if (player.health <= 0) {
+            endGame();
+        }
+
+        updateUI();
+    }
+
+    function drawGrid() {
+        ctx.save();
+        ctx.strokeStyle = "rgba(255,255,255,0.035)";
+        ctx.lineWidth = 1;
+
+        const size = 48;
+        const ox = (player.x * 0.15) % size;
+        const oy = (player.y * 0.15) % size;
+
+        for (let x = -ox; x < W; x += size) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, H);
+            ctx.stroke();
+        }
+
+        for (let y = -oy; y < H; y += size) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(W, y);
+            ctx.stroke();
+        }
+
+        ctx.restore();
+    }
+
+    function drawTank(x, y, bodyAngle, turretAngle, color, isPlayer, radius, health, maxHealth) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(bodyAngle);
+
+        ctx.fillStyle = "rgba(0,0,0,0.35)";
+        ctx.beginPath();
+        ctx.ellipse(3, 5, radius * 1.05, radius * 0.82, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#1d1d1d";
+        roundRect(-radius * 1.05, -radius * 0.72, radius * 2.1, radius * 1.44, 8);
+        ctx.fill();
+
+        ctx.fillStyle = color;
+        roundRect(-radius * 0.82, -radius * 0.58, radius * 1.64, radius * 1.16, 8);
+        ctx.fill();
+
+        ctx.fillStyle = "rgba(255,255,255,0.12)";
+        roundRect(-radius * 0.65, -radius * 0.38, radius * 0.9, radius * 0.2, 4);
+        ctx.fill();
+
+        ctx.restore();
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(turretAngle);
+
+        ctx.fillStyle = isPlayer ? "#324832" : "#4a2727";
+        roundRect(0, -5, radius * 1.55, 10, 5);
+        ctx.fill();
+
+        ctx.fillStyle = isPlayer ? "#5fbf66" : "#c24d4d";
+        ctx.beginPath();
+        ctx.arc(0, 0, radius * 0.55, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#171717";
+        ctx.beginPath();
+        ctx.arc(0, 0, radius * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+
+        if (!isPlayer) {
+            const bw = radius * 2;
+            const pct = clamp(health / maxHealth, 0, 1);
+            ctx.fillStyle = "rgba(0,0,0,0.5)";
+            ctx.fillRect(x - bw / 2, y - radius - 14, bw, 5);
+            ctx.fillStyle = "#ff5757";
+            ctx.fillRect(x - bw / 2, y - radius - 14, bw * pct, 5);
+        }
+    }
+
+    function roundRect(x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+    }
+
+    function drawObstacles() {
+        for (const o of obstacles) {
+            ctx.save();
+            ctx.translate(o.x, o.y);
+
+            ctx.fillStyle = "rgba(0,0,0,0.35)";
+            roundRect(-o.w / 2 + 5, -o.h / 2 + 6, o.w, o.h, 8);
+            ctx.fill();
+
+            ctx.fillStyle = "#4b4b3a";
+            roundRect(-o.w / 2, -o.h / 2, o.w, o.h, 8);
+            ctx.fill();
+
+            ctx.strokeStyle = "rgba(255,255,255,0.12)";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.fillStyle = "rgba(255,255,255,0.06)";
+            for (let i = -o.w / 2 + 12; i < o.w / 2; i += 22) {
+                ctx.fillRect(i, -o.h / 2 + 8, 8, o.h - 16);
+            }
+
+            ctx.restore();
+        }
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, W, H);
+
+        const bg = ctx.createRadialGradient(W / 2, H / 2, 100, W / 2, H / 2, Math.max(W, H));
+        bg.addColorStop(0, "#2e442e");
+        bg.addColorStop(1, "#111811");
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, W, H);
+
+        drawGrid();
+
+        ctx.fillStyle = "rgba(80, 120, 50, 0.12)";
+        for (let i = 0; i < 40; i++) {
+            const x = (i * 173 + 67) % W;
+            const y = (i * 241 + 91) % H;
+            ctx.beginPath();
+            ctx.arc(x, y, 2 + (i % 4), 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        drawObstacles();
+
+        for (const b of bullets) {
+            ctx.save();
+            ctx.shadowColor = "#ffe07a";
+            ctx.shadowBlur = 12;
+            ctx.fillStyle = "#ffe07a";
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        for (const b of enemyBullets) {
+            ctx.save();
+            ctx.shadowColor = "#ff563d";
+            ctx.shadowBlur = 10;
+            ctx.fillStyle = "#ff563d";
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        for (const e of enemies) {
+            drawTank(e.x, e.y, e.angle, e.turretAngle, e.color, false, e.r, e.health, e.maxHealth);
+        }
+
+        if (player.invuln > 0 && Math.floor(player.invuln * 18) % 2 === 0) {
+            ctx.globalAlpha = 0.55;
+        }
+        drawTank(player.x, player.y, player.angle, player.turretAngle, "#4fb35a", true, player.r, player.health, player.maxHealth);
+        ctx.globalAlpha = 1;
+
+        ctx.save();
+        ctx.strokeStyle = "rgba(255,255,255,0.18)";
+        ctx.setLineDash([8, 8]);
+        ctx.beginPath();
+        ctx.arc(mouse.x, mouse.y, 15, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(mouse.x - 22, mouse.y);
+        ctx.lineTo(mouse.x + 22, mouse.y);
+        ctx.moveTo(mouse.x, mouse.y - 22);
+        ctx.lineTo(mouse.x, mouse.y + 22);
+        ctx.stroke();
+        ctx.restore();
+
+        for (const p of particles) {
+            ctx.save();
+            ctx.globalAlpha = clamp(p.life / p.maxLife, 0, 1);
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+    }
+
+    function loop(t) {
+        if (!running) return;
+        const dt = Math.min(0.033, (t - lastTime) / 1000);
+        lastTime = t;
+        update(dt);
+        draw();
+        if (running) requestAnimationFrame(loop);
+    }
+
+    function endGame() {
+        running = false;
+        gameOver = true;
+        explode(player.x, player.y, 4);
+        draw();
+        centerMessage.classList.remove("hidden");
+        centerMessage.innerHTML = `
+            <h1 style="color:#ff6969;">GAME OVER</h1>
+            <p>Final Score: <strong>${score}</strong></p>
+            <p>Wave Reached: <strong>${wave}</strong></p>
+            <button id="startBtn">Play Again</button>
+        `;
+        document.getElementById("startBtn").addEventListener("click", resetGame);
+    }
+
+    document.addEventListener("keydown", (e) => {
+        keys[e.key.toLowerCase()] = true;
+        if (e.key.toLowerCase() === "r" && gameOver) resetGame();
+    });
+
+    document.addEventListener("keyup", (e) => {
+        keys[e.key.toLowerCase()] = false;
+    });
+
+    canvas.addEventListener("mousemove", (e) => {
+        const rect = canvas.getBoundingClientRect();
+        mouse.x = e.clientX - rect.left;
+        mouse.y = e.clientY - rect.top;
+    });
+
+    canvas.addEventListener("mousedown", (e) => {
+        if (e.button === 0) {
+            mouseDown = true;
+            shoot();
+        }
+    });
+
+    window.addEventListener("mouseup", () => {
+        mouseDown = false;
+    });
+
+    canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+
+    startBtn.addEventListener("click", resetGame);
+
+    mouse.x = W / 2;
+    mouse.y = H / 2;
+
+    draw();
+})();
+</script>
+</body>
+</html>
