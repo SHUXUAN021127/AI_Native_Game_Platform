@@ -162,9 +162,10 @@ return (
 
       <img
         src={
-          game.cover_url ||
-          "https://placehold.co/1200x350?text=AI+Game"
-        }
+            game.cover_url
+              ? `http://127.0.0.1:8000${game.cover_url}`
+              : "https://placehold.co/1200x400"
+          }
         alt={game.title}
         style={{
           width: "100%",

@@ -10,6 +10,7 @@ export default function Home() {
   const [search, setSearch] = useState("");
   const [recentGames, setRecentGames] = useState([]);
 
+
   useEffect(() => {
     loadGames();
   }, []);
