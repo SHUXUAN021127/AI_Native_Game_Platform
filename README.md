@@ -1,139 +1,94 @@
 # AI Native Game Platform
 
-An AI-powered platform that allows users to generate and play HTML5 games using GPT-5.5.
+AI-powered HTML5 game generation platform based on Multi-Agent architecture.
 
 ## Features
 
-* User Registration
-* User Login
-* JWT Authentication
+* User Registration and Login
+* Role-Based Access Control
 * AI Game Generation
-* HTML5 Game Publishing
-* Game List Management
-* Play Generated Games
-* Next.js Frontend
-* FastAPI Backend
-
----
-
-## Project Structure
-
-```text
-ai_native_platform
-
-├── backend
-├── frontend
-├── storage
-├── docs
-└── README.md
-```
+* HTML5 Game Hosting
+* Like and Favorite System
+* Play Statistics
+* Game History
+* Auto-generated Tags
+* Auto-generated Covers
 
 ---
 
 ## Tech Stack
 
-### Frontend
+Frontend
 
-* Next.js 15
-* TypeScript
+* Next.js
 * React
+* TypeScript
 
-### Backend
+Backend
 
 * FastAPI
 * SQLAlchemy
+* JWT
+
+Database
+
 * SQLite
 
-### AI
+AI
 
-* GPT-5.5 API
+* Multi-Agent Workflow
+* OpenAI Compatible API
 
 ---
 
-## Setup
+## Run Backend
 
-### Backend
-
-```bash
 cd backend
+
+venv\Scripts\activate
 
 pip install -r requirements.txt
 
 uvicorn main:app --reload
-```
-
-Backend URL:
-
-```text
-http://127.0.0.1:8000
-```
 
 ---
 
-### Frontend
+## Run Frontend
 
-```bash
 cd frontend
 
 npm install
 
 npm run dev
-```
-
-Frontend URL:
-
-```text
-http://localhost:3000
-```
 
 ---
 
-## Environment Variables
+## Test Accounts
 
-Create:
+Creator
 
-```text
-backend/.env
-```
+email: [creator@test.com](mailto:creator@test.com)
 
-Example:
+password: 123456
 
-```env
-OPENAI_API_KEY=your_api_key
-```
+Player
 
----
+email: [player@test.com](mailto:player@test.com)
 
-## Workflow
-
-Login
-
-↓
-
-Create Game
-
-↓
-
-GPT-5.5 Generation
-
-↓
-
-HTML Save
-
-↓
-
-Publish
-
-↓
-
-Play
+password: 123456
 
 ---
 
-## Future Improvements
+## Project Structure
 
-* Multi-Agent Workflow
-* Async Generation Queue
-* Cloud Storage
-* Content Moderation
-* Game Analytics
+frontend/
+
+backend/
+
+docs/
+
+storage/
+
+generated_games/
+
+covers/

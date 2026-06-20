@@ -4,7 +4,6 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-
 from database.db import SessionLocal
 from models.game import Game
 from services.agents.tagger import (
@@ -21,11 +20,30 @@ from services.screenshot_service import (
 from services.cover_selector import (
     select_best_cover
 )
+from models.game_like import GameLike
+from models.game_favorite import GameFavorite
+from services.auth_service import (
+    decode_token
+)
+
+from fastapi.security import (
+    OAuth2PasswordBearer
+)
+
+
+oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl="/auth/login",
+    auto_error=False
+)
 
 router = APIRouter(
     prefix="/games",
     tags=["Games"]
 )
+
+class CreateGameRequest(BaseModel):
+    title: str
+    description: str
 
 def get_db():
     db = SessionLocal()
@@ -36,9 +54,90 @@ def get_db():
     finally:
         db.close()
 
-class CreateGameRequest(BaseModel):
-    title: str
-    description: str
+def game_to_dict(
+    game,
+    db,
+    user_id=None
+):
+    liked = False
+
+    favorited = False
+
+    if user_id:
+        liked = (
+                db.query(GameLike)
+                .filter(
+                    GameLike.game_id == game.id,
+                    GameLike.user_id == user_id
+                )
+                .first()
+                is not None
+        )
+
+        favorited = (
+                db.query(GameFavorite)
+                .filter(
+                    GameFavorite.game_id == game.id,
+                    GameFavorite.user_id == user_id
+                )
+                .first()
+                is not None
+        )
+
+    like_count = (
+        db.query(GameLike)
+        .filter(
+            GameLike.game_id == game.id
+        )
+        .count()
+    )
+
+    favorite_count = (
+        db.query(GameFavorite)
+        .filter(
+            GameFavorite.game_id == game.id
+        )
+        .count()
+    )
+
+    return {
+
+        "id": game.id,
+
+        "title": game.title,
+
+        "description":
+            game.description,
+
+        "status":
+            game.status,
+
+        "author":
+            game.author,
+
+        "tags":
+            game.tags,
+
+        "cover_url":
+            game.cover_url,
+
+        "play_count":
+            game.play_count,
+
+        "like_count":
+            like_count,
+
+        "favorite_count":
+            favorite_count,
+
+        "play_url":
+            f"/games-files/{game.file_url}",
+
+        "liked": liked,
+
+        "favorited": favorited,
+    }
+
 
 @router.post("/")
 def create_game(
@@ -50,7 +149,7 @@ def create_game(
 ):
     if (
             current_user["role"]
-            != "creator"
+            not in ["creator", "admin"]
     ):
         raise HTTPException(
             status_code=403,
@@ -209,11 +308,40 @@ def create_game(
 
 @router.get("/")
 def get_games(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    token: str = Depends(
+        oauth2_scheme
+    )
 ):
+
+    user_id = None
+
+    if token:
+
+        try:
+
+            payload = decode_token(
+                token
+            )
+
+            user_id = int(
+                payload["sub"]
+            )
+
+        except:
+
+            pass
+
     games = db.query(Game).all()
 
-    return games
+    return [
+        game_to_dict(
+            game,
+            db,
+            user_id
+        )
+        for game in games
+    ]
 
 @router.get("/my-games")
 def get_my_games(
@@ -233,7 +361,16 @@ def get_my_games(
         .all()
     )
 
-    return games
+    return [
+        game_to_dict(
+            game,
+            db,
+            int(
+                current_user["sub"]
+            )
+        )
+        for game in games
+    ]
 
 @router.get("/history")
 def get_generation_history(
@@ -255,12 +392,41 @@ def get_generation_history(
         .all()
     )
 
-    return games
+    return [
+        game_to_dict(
+            game,
+            db,
+            int(
+                current_user["sub"]
+            )
+        )
+        for game in games
+    ]
 
 @router.get("/recent")
 def get_recent_games(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    token: str = Depends(
+        oauth2_scheme
+    )
 ):
+    user_id = None
+
+    if token:
+
+        try:
+
+            payload = decode_token(
+                token
+            )
+
+            user_id = int(
+                payload["sub"]
+            )
+
+        except:
+
+            pass
 
     games = (
         db.query(Game)
@@ -271,13 +437,161 @@ def get_recent_games(
         .all()
     )
 
-    return games
+    return [
+        game_to_dict(
+            game,
+            db,
+            user_id
+        )
+        for game in games
+    ]
+
+@router.post("/{game_id}/play")
+def play_game(
+    game_id: int,
+    db: Session = Depends(get_db)
+):
+
+    game = (
+        db.query(Game)
+        .filter(
+            Game.id == game_id
+        )
+        .first()
+    )
+
+    if not game:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Game not found"
+        )
+
+    game.play_count += 1
+
+    db.commit()
+
+    db.refresh(game)
+
+    return {
+        "play_count":
+        game.play_count
+    }
+
+@router.post("/{game_id}/like")
+def like_game(
+    game_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        get_current_user
+    )
+):
+
+    existing = (
+        db.query(GameLike)
+        .filter(
+            GameLike.game_id == game_id,
+            GameLike.user_id ==
+            int(current_user["sub"])
+        )
+        .first()
+    )
+
+    if existing:
+
+        db.delete(existing)
+
+        db.commit()
+
+        return {
+            "liked": False
+        }
+
+    new_like = GameLike(
+        game_id=game_id,
+        user_id=int(
+            current_user["sub"]
+        )
+    )
+
+    db.add(new_like)
+
+    db.commit()
+
+    return {
+        "liked": True
+    }
+
+@router.post("/{game_id}/favorite")
+def favorite_game(
+    game_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        get_current_user
+    )
+):
+
+    existing = (
+        db.query(GameFavorite)
+        .filter(
+            GameFavorite.game_id == game_id,
+            GameFavorite.user_id ==
+            int(current_user["sub"])
+        )
+        .first()
+    )
+
+    if existing:
+
+        db.delete(existing)
+
+        db.commit()
+
+        return {
+            "favorited": False
+        }
+
+    new_favorite = GameFavorite(
+        game_id=game_id,
+        user_id=int(
+            current_user["sub"]
+        )
+    )
+
+    db.add(new_favorite)
+
+    db.commit()
+
+    return {
+        "favorited": True
+    }
 
 @router.get("/{game_id}")
 def get_game(
     game_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    token: str = Depends(
+        oauth2_scheme
+    )
 ):
+
+    user_id = None
+
+    if token:
+
+        try:
+
+            payload = decode_token(
+                token
+            )
+
+            user_id = int(
+                payload["sub"]
+            )
+
+        except:
+
+            pass
 
     game = (
         db.query(Game)
@@ -291,18 +605,11 @@ def get_game(
             "message": "Game not found"
         }
 
-    return {
-        "id": game.id,
-        "title": game.title,
-        "description": game.description,
-        "status": game.status,
-        "creator_id": game.creator_id,
-        "tags": game.tags,
-        "author": game.author,
-        "cover_url": game.cover_url,
-        "play_url":
-            f"/games-files/{game.file_url}"
-    }
+    return game_to_dict(
+        game,
+        db,
+        user_id
+    )
 
 @router.post("/{game_id}/retry")
 def retry_game(
@@ -392,8 +699,14 @@ def delete_game(
             "Game not found"
         }
 
-    if game.creator_id != int(
+    if (
+            current_user["role"]
+            != "admin"
+            and
+            game.creator_id
+            != int(
         current_user["sub"]
+    )
     ):
 
         raise HTTPException(

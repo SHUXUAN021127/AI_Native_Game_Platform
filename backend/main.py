@@ -7,6 +7,8 @@ from routers.game import router as game_router
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from routers.upload import router as upload_router
+from models.game_like import GameLike
+from models.game_favorite import GameFavorite
 
 import os
 

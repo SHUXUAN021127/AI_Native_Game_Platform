@@ -1,126 +1,138 @@
-# AI Native Game Platform Architecture
+# AI Native Game Platform - System Design
 
-## Overview
+## 1. Project Overview
 
-AI Native Game Platform is a web platform that allows users to generate and play AI-generated HTML5 games.
+AI Native Game Platform is an AI-powered game generation platform that enables users to create HTML5 games using natural language descriptions.
 
-The platform provides a complete workflow:
+Users can:
 
-User Login → Create Game → AI Generation → Publish → Play
+* Register and login
+* Generate games through AI Agents
+* Browse published games
+* Play generated games
+* Like and favorite games
+* View creation history
+* Manage their own games
 
 ---
 
-## Tech Stack
+## 2. System Architecture
 
-### Frontend
+Frontend Layer
 
-* Next.js 15
-* TypeScript
+* Next.js
 * React
+* TypeScript
 
-### Backend
+Backend Layer
 
 * FastAPI
 * SQLAlchemy
+* JWT Authentication
+
+Database Layer
+
 * SQLite
 
-### AI Layer
+AI Layer
 
-* GPT-5.5 API
+* Planner Agent
+* Generator Agent
+* Reviewer Agent
+* Storage Agent
 
-### Storage
+Storage Layer
 
-* Local File Storage
-
----
-
-## System Architecture
-
-Frontend (Next.js)
-
-↓
-
-Backend API (FastAPI)
-
-↓
-
-GPT-5.5 Service
-
-↓
-
-HTML Game Generation
-
-↓
-
-Storage + Database
+* Generated HTML Files
+* Generated Cover Images
+* Generated Game Tags
 
 ---
 
-## Create Game Workflow
+## 3. Agent Workflow
 
-1. User enters game idea
-2. Frontend sends request to FastAPI
-3. Backend calls GPT-5.5
-4. GPT generates HTML5 game
-5. Backend saves HTML file
-6. Backend saves metadata to database
-7. Game appears on Home page
+User Prompt
 
----
-
-## Play Game Workflow
-
-1. User opens Home page
-2. User selects a game
-3. Frontend loads game information
-4. Browser opens generated HTML
-5. User plays the game
-
----
-
-## Multi-Agent Workflow
+↓
 
 Planner Agent
+
+Analyze user requirements and generate game specifications
 
 ↓
 
 Generator Agent
 
+Generate HTML5 game code
+
 ↓
 
 Reviewer Agent
 
+Validate generated HTML content
+
 ↓
 
-Save Game
+Storage Agent
+
+Save generated game files
+
+↓
+
+Game Published
 
 ---
 
-## Database Design
+## 4. User Roles
 
-### User
+### Player
 
-* id
-* email
-* password_hash
-* created_at
+* Browse games
+* Play games
+* Like games
+* Favorite games
 
-### Game
+### Creator
 
-* id
-* title
-* description
-* file_url
-* creator_id
-* created_at
+* All Player permissions
+* Create games
+* Delete games
+* Retry failed generations
+
+### Admin
+
+* Platform management
+* User management
+* Content moderation
+* Statistics dashboard
 
 ---
 
-## Future Improvements
+## 5. Security Design
 
-* Multi-Agent workflow
-* Async task queue
-* Cloud object storage
-* Sandbox execution
-* Game moderation
-* User profile system
+Authentication:
+
+* JWT Token Authentication
+
+Authorization:
+
+* Role-Based Access Control (RBAC)
+
+Data Validation:
+
+* Pydantic Schema Validation
+
+Password Storage:
+
+* bcrypt Hashing
+
+---
+
+## 6. Future Improvements
+
+* Google OAuth Login
+* GitHub OAuth Login
+* MinIO Object Storage
+* Trending Recommendation System
+* Remix Game Generation
+* Content Moderation Agent

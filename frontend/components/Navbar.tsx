@@ -148,7 +148,10 @@ export default function Navbar() {
           </Link>
 
           {
-              role === "creator" && (
+              (
+                role === "creator" ||
+                role === "admin"
+              ) && (
 
                 <Link href="/create">
                   Create
@@ -176,6 +179,16 @@ export default function Navbar() {
                   }}
                 >
                   👤 {email}
+                </span>
+
+                <span>
+                  {
+                    role === "admin"
+                      ? "👑 Admin"
+                      : role === "creator"
+                      ? "🎮 Creator"
+                      : "👤 Player"
+                  }
                 </span>
 
                 <button

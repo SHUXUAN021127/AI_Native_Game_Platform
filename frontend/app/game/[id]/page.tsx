@@ -7,32 +7,74 @@ import TagList from "@/components/TagList";
 
 export default function GameDetailPage() {
 
-const params = useParams();
+    const params = useParams();
 
-const [game, setGame] = useState<any>(null);
+    const [game, setGame] = useState<any>(null);
 
-useEffect(() => {
-
-
-if (params?.id) {
-  loadGame();
-}
+    useEffect(() => {
 
 
-}, [params]);
-
-async function loadGame() {
-
-
-const response = await fetch(
-  `http://127.0.0.1:8000/games/${params.id}`
-);
-
-const data = await response.json();
-
-setGame(data);
+    if (params?.id) {
+      loadGame();
+    }
 
 
+    }, [params]);
+
+    async function loadGame() {
+
+
+    const response = await fetch(
+      `http://127.0.0.1:8000/games/${params.id}`
+    );
+
+    const data = await response.json();
+
+    setGame(data);
+
+
+    }
+
+    async function likeGame() {
+
+      const token =
+        localStorage.getItem(
+          "token"
+        );
+
+      await fetch(
+        `http://127.0.0.1:8000/games/${params.id}/like`,
+        {
+          method: "POST",
+          headers: {
+            Authorization:
+              `Bearer ${token}`
+          }
+        }
+      );
+
+      loadGame();
+    }
+
+    async function favoriteGame() {
+
+      const token =
+        localStorage.getItem(
+          "token"
+        );
+
+      await fetch(
+        `http://127.0.0.1:8000/games/${params.id}/favorite`,
+        {
+          method: "POST",
+          headers: {
+            Authorization:
+              `Bearer ${token}`
+          }
+        }
+      );
+
+      loadGame();
 }
 
 if (!game) {
@@ -182,6 +224,57 @@ return (
               ? "🟡 GENERATING"
               : "🔴 FAILED"
           }
+        </div>
+
+        <div
+          style={{
+            marginTop: "16px"
+          }}
+        >
+          <div
+            style={{
+              color: "#f59e0b",
+              fontWeight: "700",
+              fontSize: "18px"
+            }}
+          >
+            🔥 {game.play_count || 0} Plays
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              gap: "24px",
+              marginTop: "12px",
+              fontWeight: "600"
+            }}
+          >
+            <span
+              onClick={likeGame}
+              style={{
+                cursor: "pointer",
+                color:
+                  game.liked
+                    ? "#ef4444"
+                    : "#64748b"
+              }}
+            >
+              ❤️ {game.like_count || 0}
+            </span>
+
+            <span
+              onClick={favoriteGame}
+              style={{
+                cursor: "pointer",
+                color:
+                  game.favorited
+                    ? "#f59e0b"
+                    : "#64748b"
+              }}
+            >
+              ⭐ {game.favorite_count || 0}
+            </span>
+          </div>
         </div>
 
         <h2

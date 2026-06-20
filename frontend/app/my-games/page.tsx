@@ -245,11 +245,19 @@ export default function MyGamesPage() {
                   >
 
                 <button
-                  onClick={() =>
+                  onClick={async () => {
+
+                    await fetch(
+                      `http://127.0.0.1:8000/games/${game.id}/play`,
+                      {
+                        method: "POST"
+                      }
+                    );
+
                     window.open(
                       `http://127.0.0.1:8000/games-files/${game.file_url}`
-                    )
-                  }
+                    );
+                  }}
                   style={{
                     flex: 2,
                     border: "none",

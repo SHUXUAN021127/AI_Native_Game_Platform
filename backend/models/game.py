@@ -58,7 +58,13 @@ class Game(Base):
         nullable=True
     )
 
+    play_count = Column(
+        Integer,
+        default=0
+    )
+
     generation_logs = Column(
         Text,
         nullable=True
     )
+

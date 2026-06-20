@@ -222,6 +222,47 @@ export default function Home() {
 
               <p
                 style={{
+                  color: "#f59e0b",
+                  fontWeight: "600",
+                  marginTop: "6px"
+                }}
+              >
+                🔥 {game.play_count || 0} Plays
+              </p>
+
+              <div
+                  style={{
+                    display: "flex",
+                    gap: "16px",
+                    marginTop: "8px",
+                    fontWeight: "600"
+                  }}
+                >
+                  <span
+                    style={{
+                      color:
+                        game.liked
+                          ? "#ef4444"
+                          : "#64748b"
+                    }}
+                  >
+                    ❤️ {game.like_count || 0}
+                  </span>
+
+                  <span
+                    style={{
+                      color:
+                        game.favorited
+                          ? "#f59e0b"
+                          : "#64748b"
+                    }}
+                  >
+                    ⭐ {game.favorite_count || 0}
+                  </span>
+                </div>
+
+              <p
+                style={{
                   fontWeight: "bold",
                 }}
               >
@@ -249,11 +290,18 @@ export default function Home() {
                     borderRadius: "10px",
                     cursor: "pointer",
                   }}
-                  onClick={() =>
-                    window.open(
-                      `http://127.0.0.1:8000/games-files/${game.file_url}`
-                    )
-                  }
+                  onClick={async () => {
+                      await fetch(
+                        `http://127.0.0.1:8000/games/${game.id}/play`,
+                        {
+                          method: "POST"
+                        }
+                      );
+
+                      window.open(
+                        `http://127.0.0.1:8000${game.play_url}`
+                      );
+                    }}
                 >
                   ▶ Play
                 </button>
