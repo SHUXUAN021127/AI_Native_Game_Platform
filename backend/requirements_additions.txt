@@ -1,0 +1,3 @@
+# 把这两行加到你现有的 requirements.txt 末尾即可
+pydantic-settings==2.7.1   # config.py 用
+alembic==1.14.0            # 数据库迁移（第 2 批用）

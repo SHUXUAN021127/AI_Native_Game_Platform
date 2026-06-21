@@ -1,141 +1,56 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from passlib.context import CryptContext
-from pydantic import BaseModel, EmailStr
-from database.db import SessionLocal
-from models.user import User
-from jose import jwt
-from datetime import datetime, timedelta
+"""认证路由：注册 / 登录。"""
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from config import SECRET_KEY
+from sqlalchemy.orm import Session
 
-ALGORITHM = "HS256"
-
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
-
-
-# 创建路由
-router = APIRouter(
-    prefix="/auth",
-    tags=["Auth"]
+from database.db import get_db
+from models.user import User
+from schemas.auth import RegisterRequest, Token
+from schemas.user import UserPublic
+from services.auth_service import (
+    create_access_token,
+    hash_password,
+    verify_password,
 )
 
-# 密码加密工具
-pwd_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto"
+router = APIRouter(prefix="/auth", tags=["Auth"])
+
+
+@router.post(
+    "/register", response_model=UserPublic, status_code=status.HTTP_201_CREATED
 )
-
-class RegisterRequest(BaseModel):
-    email: EmailStr
-    password: str
-    role: str
-
-class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str
-
-# 数据库连接
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-def create_access_token(data: dict):
-
-    to_encode = data.copy()
-
-    expire = datetime.utcnow() + timedelta(
-        minutes=ACCESS_TOKEN_EXPIRE_MINUTES
-    )
-
-    to_encode.update(
-        {"exp": expire}
-    )
-
-    return jwt.encode(
-        to_encode,
-        SECRET_KEY,
-        algorithm=ALGORITHM
-    )
-
-# 注册接口
-@router.post("/register")
-def register(
-    request: RegisterRequest,
-    db: Session = Depends(get_db)
-):
-    # 检查邮箱是否已存在
-    existing_user = (
-        db.query(User)
-        .filter(User.email == request.email)
-        .first()
-    )
-
-    if existing_user:
+def register(request: RegisterRequest, db: Session = Depends(get_db)):
+    exists = db.query(User).filter(User.email == request.email).first()
+    if exists:
         raise HTTPException(
-            status_code=400,
-            detail="Email already exists"
+            status_code=status.HTTP_409_CONFLICT, detail="Email already exists"
         )
 
-    # 密码加密
-    hashed_password = pwd_context.hash(request.password)
-
-    # 创建用户
     user = User(
         email=request.email,
-        password_hash=hashed_password,
-        role=request.role
+        password_hash=hash_password(request.password),
+        role=request.role,
     )
-
     db.add(user)
     db.commit()
+    db.refresh(user)
+    return user  # UserPublic.from_attributes，不含 password_hash
 
-    return {
-        "message": "Register Success"
-    }
 
-@router.post("/login")
+@router.post("/login", response_model=Token)
 def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-
-    user = (
-        db.query(User)
-        .filter(User.email == form_data.username)
-        .first()
-    )
-
-    if not user:
+    user = db.query(User).filter(User.email == form_data.username).first()
+    if not user or not verify_password(form_data.password, user.password_hash):
         raise HTTPException(
-            status_code=401,
-            detail="Invalid credentials"
-        )
-
-    valid = pwd_context.verify(
-        form_data.password,
-        user.password_hash
-    )
-
-    if not valid:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid credentials"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials",
         )
 
     token = create_access_token(
-        {
-            "sub": str(user.id),
-            "email": user.email,
-            "role": user.role
-        }
+        user_id=user.id, email=user.email, role=user.role
     )
-
-    return {
-        "access_token": token,
-        "token_type": "bearer",
-        "role": user.role
-    }
+    return Token(access_token=token, role=user.role)

@@ -1,311 +1,128 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+
+import { gamesApi } from "@/lib/api";
+import { useAuth } from "@/lib/auth/AuthContext";
+import type { Game } from "@/lib/types";
+import { theme } from "@/lib/theme";
+
+import GameLogs from "@/components/GameLogs";
+import StatusBadge from "@/components/StatusBadge";
 
 export default function HistoryPage() {
-
-  const [history, setHistory] =
-    useState<any[]>([]);
+  const [history, setHistory] = useState<Game[]>([]);
+  const [ready, setReady] = useState(false);
+  const router = useRouter();
+  const { isAuthenticated, loading } = useAuth();
 
   useEffect(() => {
-    loadHistory();
-  }, []);
-
-  async function loadHistory() {
-
-    const token =
-      localStorage.getItem(
-        "token"
-      );
-
-    if (!token) {
-
-      window.location.href =
-        "/login";
-
+    if (loading) return;
+    if (!isAuthenticated) {
+      router.push("/login");
       return;
     }
+    load();
+    setReady(true);
+  }, [loading, isAuthenticated]);
 
-    const response = await fetch(
-      "http://127.0.0.1:8000/games/history",
-      {
-        headers: {
-          Authorization:
-            `Bearer ${token}`
-        }
-      }
-    );
-
-    const data =
-      await response.json();
-
-    setHistory(data);
+  async function load() {
+    try {
+      setHistory(await gamesApi.history());
+    } catch {
+      setHistory([]);
+    }
   }
 
-  async function retryGame(
-      gameId: number
-    ) {
+  async function retry(id: number) {
+    await gamesApi.retry(id);
+    load();
+  }
 
-      const token =
-        localStorage.getItem(
-          "token"
-        );
-
-      await fetch(
-        `http://127.0.0.1:8000/games/${gameId}/retry`,
-        {
-          method: "POST",
-          headers: {
-            Authorization:
-              `Bearer ${token}`
-          }
-        }
-      );
-
-      loadHistory();
-    }
+  if (!ready) return null;
 
   return (
-
-    <main
-      style={{
-        minHeight: "100vh",
-        background:
-          "linear-gradient(135deg,#f8fafc,#eef2ff)",
-        padding: "40px"
-      }}
-    >
-
-      <div
-        style={{
-          maxWidth: "1200px",
-          margin: "0 auto"
-        }}
-      >
-
-        <h1
-          style={{
-            fontSize: "42px",
-            marginBottom: "12px"
-          }}
-        >
-          📜 Generation History
-        </h1>
-
-        <p
-          style={{
-            color: "#64748b",
-            marginBottom: "32px"
-          }}
-        >
-          View all generated games
+    <main style={{ minHeight: "100vh", background: theme.color.pageGradient, padding: "40px" }}>
+      <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+        <h1 style={{ fontSize: "42px", marginBottom: "12px" }}>📜 Generation History</h1>
+        <p style={{ color: theme.color.textMuted, marginBottom: "32px" }}>
+          Every game you've generated, newest first
         </p>
 
-        <div
-          style={{
-            display: "grid",
-            gap: "16px"
-          }}
-        >
-
+        <div style={{ display: "grid", gap: "16px" }}>
           {history.map((game) => (
-
             <div
               key={game.id}
               style={{
-                background: "white",
-                borderRadius: "16px",
+                background: theme.color.white,
+                borderRadius: theme.radius.xl,
                 padding: "20px",
-                boxShadow:
-                  "0 8px 24px rgba(0,0,0,0.08)"
+                boxShadow: theme.shadow.card,
               }}
             >
-
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent:
-                    "space-between"
-                }}
-              >
-
-                <h2>
-                  {game.title}
-                </h2>
-
-                <span
-                  style={{
-                    padding:
-                      "6px 12px",
-                    borderRadius:
-                      "999px",
-                    background:
-                      game.status ===
-                      "COMPLETED"
-                        ? "#dcfce7"
-                        : game.status ===
-                          "FAILED"
-                        ? "#fee2e2"
-                        : "#fef3c7"
-                  }}
-                >
-                  {game.status}
-                </span>
-
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h2 style={{ margin: 0 }}>{game.title}</h2>
+                <StatusBadge status={game.status} />
               </div>
 
-              <p
-                style={{
-                  color: "#64748b"
-                }}
-              >
-                {game.description}
+              <p style={{ color: theme.color.textMuted }}>{game.description}</p>
+
+              <p style={{ marginTop: "10px", fontSize: "14px", color: theme.color.textFaint }}>
+                Created{" "}
+                {game.created_at
+                  ? new Date(game.created_at).toLocaleString("zh-CN", {
+                      timeZone: "Asia/Shanghai",
+                      year: "numeric",
+                      month: "2-digit",
+                      day: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : "—"}
               </p>
 
-              <p
-                style={{
-                  marginTop: "10px",
-                  fontSize: "14px",
-                  color: "#94a3b8"
-                }}
-              >
-                Created:
-                {" "}
-                {new Date(
-                  game.created_at
-                ).toLocaleString(
-                  "zh-CN",
-                  {
-                    timeZone: "Asia/Shanghai",
-                    year: "numeric",
-                    month: "2-digit",
-                    day: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit"
-                  }
-                )}
-              </p>
-
-              <div
-                style={{
-                  marginTop: "16px"
-                }}
-              >
-
-                <button
-                  onClick={() =>
-                    window.location.href =
-                      `/game/${game.id}`
-                  }
-                  style={{
-                    border: "none",
-                    borderRadius:
-                      "10px",
-                    padding:
-                      "10px 18px",
-                    background:
-                      "linear-gradient(90deg,#6366f1,#8b5cf6)",
-                    color:
-                      "white",
-                    cursor:
-                      "pointer"
-                  }}
-                >
-                  View Details
+              <div style={{ marginTop: "16px", display: "flex", gap: "10px" }}>
+                <button onClick={() => router.push(`/game/${game.id}`)} style={primaryButtonStyle}>
+                  View details
                 </button>
-
-                {
-                  game.status ===
-                  "FAILED" && (
-
-                    <button
-                      onClick={() =>
-                        retryGame(
-                          game.id
-                        )
-                      }
-                      style={{
-                        marginLeft: "10px",
-                        border: "none",
-                        borderRadius:
-                          "10px",
-                        padding:
-                          "10px 18px",
-                        background:
-                          "#f59e0b",
-                        color:
-                          "white",
-                        cursor:
-                          "pointer"
-                      }}
-                    >
-                      🔄 Retry
-                    </button>
-
-                  )
-                }
-
-                <details
-                  style={{
-                    marginTop: "16px"
-                  }}
-                >
-
-                  <summary
-                    style={{
-                      cursor: "pointer",
-                      fontWeight: "bold"
-                    }}
-                  >
-                    🤖 View Agent Logs
-                  </summary>
-
-                  <div
-                    style={{
-                      marginTop: "12px"
-                    }}
-                  >
-
-                    {
-                      game.generation_logs
-                        ?.split("\n")
-                        .map(
-                          (
-                            log: string,
-                            index: number
-                          ) => (
-
-                            <div
-                              key={index}
-                              style={{
-                                padding: "10px",
-                                marginBottom: "8px",
-                                background: "#f8fafc",
-                                borderRadius: "10px"
-                              }}
-                            >
-                              {log}
-                            </div>
-
-                          )
-                        )
-                    }
-
-                  </div>
-
-                </details>
-
+                {game.status === "FAILED" && (
+                  <button onClick={() => retry(game.id)} style={retryButtonStyle}>
+                    🔄 Retry
+                  </button>
+                )}
               </div>
 
+              <details style={{ marginTop: "16px" }}>
+                <summary style={{ cursor: "pointer", fontWeight: "bold" }}>
+                  🤖 View agent logs
+                </summary>
+                <div style={{ marginTop: "12px" }}>
+                  <GameLogs logs={game.generation_logs} />
+                </div>
+              </details>
             </div>
-
           ))}
-
         </div>
-
       </div>
-
     </main>
-
   );
 }
+
+const primaryButtonStyle: React.CSSProperties = {
+  border: "none",
+  borderRadius: theme.radius.md,
+  padding: "10px 18px",
+  background: theme.gradient.primary,
+  color: "white",
+  cursor: "pointer",
+};
+
+const retryButtonStyle: React.CSSProperties = {
+  border: "none",
+  borderRadius: theme.radius.md,
+  padding: "10px 18px",
+  background: theme.color.amber,
+  color: "white",
+  cursor: "pointer",
+};

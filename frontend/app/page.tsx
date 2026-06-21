@@ -1,344 +1,144 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useState } from "react";
-import { getGames } from "../lib/api";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+
+import { gamesApi } from "@/lib/api";
+import { assetUrl } from "@/lib/http";
+import type { Game } from "@/lib/types";
+import { gradientText, theme } from "@/lib/theme";
+
+import GameCard from "@/components/GameCard";
 
 export default function Home() {
-
-  const [games, setGames] = useState<any[]>([]);
+  const [games, setGames] = useState<Game[]>([]);
+  const [recent, setRecent] = useState<Game[]>([]);
   const [search, setSearch] = useState("");
-  const [recentGames, setRecentGames] = useState([]);
+  const router = useRouter();
 
-
+  // 合并成一个 effect；原来写了两个、loadGames 被调了两次
   useEffect(() => {
-    loadGames();
+    gamesApi.list().then(setGames).catch(() => setGames([]));
+    gamesApi.recent().then(setRecent).catch(() => setRecent([]));
   }, []);
 
-  useEffect(() => {
+  const filtered = useMemo(() => {
+    const kw = search.toLowerCase();
+    if (!kw) return games;
+    return games.filter((g) =>
+      [g.title, g.description, g.tags]
+        .filter(Boolean)
+        .some((v) => v!.toLowerCase().includes(kw))
+    );
+  }, [games, search]);
 
-    loadGames();
-
-    loadRecentGames();
-
-  }, []);
-
-  async function loadRecentGames() {
-
-      const response =
-        await fetch(
-          "http://127.0.0.1:8000/games/recent"
-        );
-
-      const data =
-        await response.json();
-
-      setRecentGames(data);
-
+  async function play(game: Game) {
+    try {
+      await gamesApi.play(game.id);
+    } finally {
+      const url = assetUrl(game.play_url);
+      if (url) window.open(url, "_blank");
     }
-
-  async function loadGames() {
-    const data = await getGames();
-    setGames(data);
   }
 
-  const filteredGames = games.filter((game) =>
-  {
-    const keyword =
-      search.toLowerCase();
-
+  function gameActions(game: Game) {
     return (
-      game.title
-        ?.toLowerCase()
-        .includes(keyword)
-
-      ||
-
-      game.description
-        ?.toLowerCase()
-        .includes(keyword)
-
-      ||
-
-      game.tags
-        ?.toLowerCase()
-        .includes(keyword)
+      <>
+        <button onClick={() => play(game)} style={playButtonStyle}>
+          ▶ Play
+        </button>
+        <button
+          onClick={() => router.push(`/game/${game.id}`)}
+          style={detailButtonStyle}
+        >
+          Details
+        </button>
+      </>
     );
-  });
+  }
 
   return (
-    <main
-      style={{
-        padding: "40px",
-        background: "#f8fafc",
-        minHeight: "100vh",
-      }}
-    >
-      <div
-        style={{
-          marginBottom: "40px",
-        }}
-      >
-        <h1
-          style={{
-            fontSize: "52px",
-            fontWeight: "bold",
-            background:
-              "linear-gradient(90deg,#6366f1,#8b5cf6)",
-            WebkitBackgroundClip: "text",
-            color: "transparent",
-            marginBottom: "12px",
-          }}
-        >
+    <main style={{ padding: "40px", background: theme.color.pageBg, minHeight: "100vh" }}>
+      <div style={{ marginBottom: "32px" }}>
+        <h1 style={{ fontSize: "52px", fontWeight: "bold", marginBottom: "12px", ...gradientText }}>
           🎮 AI Native Game Platform
         </h1>
-
-        <p
-          style={{
-            color: "#64748b",
-            fontSize: "18px",
-          }}
-        >
-          Create, Publish and Play AI Generated Games
+        <p style={{ color: theme.color.textMuted, fontSize: "18px" }}>
+          Create, publish and play AI-generated games
         </p>
       </div>
 
-      <div
+      <input
+        type="text"
+        placeholder="🔍 Search by title, tags or description…"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
         style={{
-          display: "flex",
-          gap: "16px",
+          width: "100%",
+          height: "60px",
+          padding: "0 20px",
+          borderRadius: theme.radius.xl,
+          border: `1px solid ${theme.color.border}`,
+          fontSize: "18px",
           marginBottom: "32px",
+          boxSizing: "border-box",
         }}
-      >
-        <input
-          type="text"
-          placeholder="🔍 Search by title, tags or description..."
-          value={search}
-          onChange={(e) =>
-            setSearch(
-              e.target.value
-            )
-          }
-          style={{
-            width: "100%",
-            height: "60px",
-            padding: "0 20px",
-            borderRadius: "16px",
-            border: "1px solid #e2e8f0",
-            fontSize: "18px"
-          }}
-        />
+      />
 
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "repeat(auto-fill,minmax(350px,1fr))",
-          gap: "24px",
-        }}
-      >
-        {filteredGames.map((game) => (
-          <div
-            key={game.id}
-            style={{
-              background: "white",
-              borderRadius: "20px",
-              overflow: "hidden",
-              boxShadow:
-                "0 8px 24px rgba(0,0,0,0.08)",
-            }}
-          >
-            <img
-              src={
-                game.cover_url
-                  ? `http://127.0.0.1:8000${game.cover_url}`
-                  : "https://placehold.co/400x250"
-              }
-            />
-
-            <div
-              style={{
-                padding: "20px",
-              }}
-            >
-              <h2>{game.title}</h2>
-
-              <p
-                style={{
-                  color: "#64748b",
-                }}
-              >
-                By {game.author}
-              </p>
-
-              <p>
-                {game.description}
-              </p>
-
-              <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: "8px",
-                    marginTop: "12px"
-                  }}
-                >
-                  {
-                    game.tags
-                      ?.split(",")
-                      .map((tag: string) => (
-
-                        <span
-                          key={tag}
-                          style={{
-                            background: "#eef2ff",
-                            color: "#4f46e5",
-                            padding: "4px 10px",
-                            borderRadius: "999px",
-                            fontSize: "12px",
-                            fontWeight: "500"
-                          }}
-                        >
-                          {tag.trim()}
-                        </span>
-
-                      ))
-                  }
-                </div>
-
-              <p
-                style={{
-                  color: "#64748b",
-                  fontSize: "14px",
-                }}
-              >
-                Created:
-                {" "}
-                {new Date(
-                  game.created_at
-                ).toLocaleString(
-                  "zh-CN",
-                  {
-                    timeZone: "Asia/Shanghai",
-                    year: "numeric",
-                    month: "2-digit",
-                    day: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit"
-                  }
-                )}
-              </p>
-
-              <p
-                style={{
-                  color: "#f59e0b",
-                  fontWeight: "600",
-                  marginTop: "6px"
-                }}
-              >
-                🔥 {game.play_count || 0} Plays
-              </p>
-
-              <div
-                  style={{
-                    display: "flex",
-                    gap: "16px",
-                    marginTop: "8px",
-                    fontWeight: "600"
-                  }}
-                >
-                  <span
-                    style={{
-                      color:
-                        game.liked
-                          ? "#ef4444"
-                          : "#64748b"
-                    }}
-                  >
-                    ❤️ {game.like_count || 0}
-                  </span>
-
-                  <span
-                    style={{
-                      color:
-                        game.favorited
-                          ? "#f59e0b"
-                          : "#64748b"
-                    }}
-                  >
-                    ⭐ {game.favorite_count || 0}
-                  </span>
-                </div>
-
-              <p
-                style={{
-                  fontWeight: "bold",
-                }}
-              >
-                {game.status === "COMPLETED"
-                  ? "🟢 COMPLETED"
-                  : game.status === "GENERATING"
-                  ? "🟡 GENERATING"
-                  : "🔴 FAILED"}
-              </p>
-
-              <div
-                style={{
-                  display: "flex",
-                  gap: "10px",
-                  marginTop: "16px",
-                }}
-              >
-                <button
-                  style={{
-                    background:
-                      "linear-gradient(90deg,#10b981,#14b8a6)",
-                    color: "white",
-                    border: "none",
-                    padding: "10px 18px",
-                    borderRadius: "10px",
-                    cursor: "pointer",
-                  }}
-                  onClick={async () => {
-                      await fetch(
-                        `http://127.0.0.1:8000/games/${game.id}/play`,
-                        {
-                          method: "POST"
-                        }
-                      );
-
-                      window.open(
-                        `http://127.0.0.1:8000${game.play_url}`
-                      );
-                    }}
-                >
-                  ▶ Play
-                </button>
-
-                <button
-                  style={{
-                    background:
-                      "linear-gradient(90deg,#6366f1,#8b5cf6)",
-                    color: "white",
-                    border: "none",
-                    padding: "10px 18px",
-                    borderRadius: "10px",
-                    cursor: "pointer",
-                  }}
-                  onClick={() =>
-                    (window.location.href =
-                      `/game/${game.id}`)
-                  }
-                >
-                  📄 Detail
-                </button>
-              </div>
-            </div>
+      {/* Recently added —— 原来拉取了却没渲染，这里补上 */}
+      {!search && recent.length > 0 && (
+        <section style={{ marginBottom: "40px" }}>
+          <h2 style={{ fontSize: "24px", marginBottom: "16px" }}>🆕 Recently added</h2>
+          <div style={gridStyle}>
+            {recent.map((g) => (
+              <GameCard key={g.id} game={g} actions={gameActions(g)} />
+            ))}
           </div>
-        ))}
-      </div>
+        </section>
+      )}
+
+      <section>
+        <h2 style={{ fontSize: "24px", marginBottom: "16px" }}>All games</h2>
+        {filtered.length === 0 ? (
+          <p style={{ color: theme.color.textMuted }}>
+            {search ? "No games match your search." : "No games yet. Be the first to create one."}
+          </p>
+        ) : (
+          <div style={gridStyle}>
+            {filtered.map((g) => (
+              <GameCard key={g.id} game={g} actions={gameActions(g)} />
+            ))}
+          </div>
+        )}
+      </section>
     </main>
   );
 }
+
+const gridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fill,minmax(320px,1fr))",
+  gap: "24px",
+};
+
+const playButtonStyle: React.CSSProperties = {
+  flex: 2,
+  background: theme.gradient.success,
+  color: "white",
+  border: "none",
+  padding: "10px 18px",
+  borderRadius: theme.radius.md,
+  cursor: "pointer",
+  fontWeight: "bold",
+};
+
+const detailButtonStyle: React.CSSProperties = {
+  flex: 1,
+  background: theme.gradient.primary,
+  color: "white",
+  border: "none",
+  padding: "10px 18px",
+  borderRadius: theme.radius.md,
+  cursor: "pointer",
+  fontWeight: "bold",
+};

@@ -1,135 +1,49 @@
 "use client";
 
+// 视觉与原版一致，只把登录状态逻辑换成 useAuth：
+// 不再 setInterval 每秒轮询 localStorage，也不再手动 atob 解 token。
+
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+
+import { useAuth } from "@/lib/auth/AuthContext";
 
 export default function Navbar() {
+  const { user, role, isAuthenticated, logout } = useAuth();
+  const router = useRouter();
 
-  const [loggedIn,
-    setLoggedIn] =
-    useState(false);
-
-  const [email,
-    setEmail] =
-    useState("");
-
-  const [role, setRole] =
-    useState("");
-
-  useEffect(() => {
-
-  const userRole =
-    localStorage.getItem(
-      "role"
-    ) || "";
-
-  setRole(userRole);
-
-  }, []);
-
-  useEffect(() => {
-
-  checkLogin();
-
-  const interval =
-    setInterval(
-      checkLogin,
-      1000
-    );
-
-  return () =>
-    clearInterval(
-      interval
-    );
-
-  }, []);
-
-  function checkLogin() {
-
-    const token =
-      localStorage.getItem(
-        "token"
-      );
-
-    setLoggedIn(
-      !!token
-    );
-
-    if (token) {
-
-      try {
-
-        const payload =
-          JSON.parse(
-            atob(
-              token.split(".")[1]
-            )
-          );
-
-        setEmail(
-          payload.email
-        );
-
-      } catch {
-
-        setEmail("");
-      }
-    }
-  }
-
-  function logout() {
-
-  localStorage.removeItem(
-    "token"
-  );
-
-  localStorage.removeItem(
-    "role"
-  );
-
-  setLoggedIn(false);
-
-  setEmail("");
-
-  window.location.href = "/";
+  function handleLogout() {
+    logout();
+    router.push("/");
   }
 
   return (
-
     <header
       style={{
         background: "white",
-        boxShadow:
-          "0 2px 8px rgba(0,0,0,0.05)",
-        padding:
-          "16px 40px",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+        padding: "16px 40px",
         position: "sticky",
         top: 0,
-        zIndex: 100
+        zIndex: 100,
       }}
     >
-
       <div
         style={{
           display: "flex",
-          justifyContent:
-            "space-between",
-          alignItems: "center"
+          justifyContent: "space-between",
+          alignItems: "center",
         }}
       >
-
         <Link
           href="/"
           style={{
-            textDecoration:
-              "none",
+            textDecoration: "none",
             fontSize: "24px",
             fontWeight: "bold",
-            background:
-              "linear-gradient(90deg,#6366f1,#8b5cf6)",
-            WebkitBackgroundClip:
-              "text",
-            color: "transparent"
+            background: "linear-gradient(90deg,#6366f1,#8b5cf6)",
+            WebkitBackgroundClip: "text",
+            color: "transparent",
           }}
         >
           🎮 AI Platform
@@ -139,101 +53,53 @@ export default function Navbar() {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "20px"
+            gap: "20px",
           }}
         >
+          <Link href="/">Home</Link>
 
-          <Link href="/">
-            Home
-          </Link>
+          {(role === "creator" || role === "admin") && (
+            <Link href="/create">Create</Link>
+          )}
 
-          {
-              (
-                role === "creator" ||
-                role === "admin"
-              ) && (
+          <Link href="/my-games">My Games</Link>
 
-                <Link href="/create">
-                  Create
-                </Link>
+          <Link href="/history">📜 History</Link>
 
-              )
-          }
+          {isAuthenticated ? (
+            <>
+              <span style={{ color: "#64748b" }}>👤 {user?.email}</span>
 
-          <Link href="/my-games">
-            My Games
-          </Link>
+              <span>
+                {role === "admin"
+                  ? "👑 Admin"
+                  : role === "creator"
+                  ? "🎮 Creator"
+                  : "👤 Player"}
+              </span>
 
-          <Link href="/history">
-            📜 History
-          </Link>
-
-          {
-            loggedIn ? (
-
-              <>
-                <span
-                  style={{
-                    color:
-                      "#64748b"
-                  }}
-                >
-                  👤 {email}
-                </span>
-
-                <span>
-                  {
-                    role === "admin"
-                      ? "👑 Admin"
-                      : role === "creator"
-                      ? "🎮 Creator"
-                      : "👤 Player"
-                  }
-                </span>
-
-                <button
-                  onClick={
-                    logout
-                  }
-                  style={{
-                    background:
-                      "linear-gradient(90deg,#ef4444,#dc2626)",
-                    color:
-                      "white",
-                    border:
-                      "none",
-                    padding:
-                      "10px 16px",
-                    borderRadius:
-                      "10px",
-                    cursor:
-                      "pointer"
-                  }}
-                >
-                  Logout
-                </button>
-              </>
-
-            ) : (
-
-              <>
-                <Link href="/login">
-                  Login
-                </Link>
-
-                <Link href="/register">
-                  Register
-                </Link>
-              </>
-
-            )
-          }
-
+              <button
+                onClick={handleLogout}
+                style={{
+                  background: "linear-gradient(90deg,#ef4444,#dc2626)",
+                  color: "white",
+                  border: "none",
+                  padding: "10px 16px",
+                  borderRadius: "10px",
+                  cursor: "pointer",
+                }}
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <Link href="/login">Login</Link>
+              <Link href="/register">Register</Link>
+            </>
+          )}
         </div>
-
       </div>
-
     </header>
-
   );
 }

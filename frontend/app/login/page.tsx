@@ -1,196 +1,143 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+import { authApi } from "@/lib/api";
+import { useAuth } from "@/lib/auth/AuthContext";
+import { ApiError } from "@/lib/http";
+import { gradientText, theme } from "@/lib/theme";
 
 export default function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-const [email, setEmail] = useState("");
+  const router = useRouter();
+  const { login } = useAuth();
 
-const [password, setPassword] = useState("");
-
-const [loading, setLoading] =
-useState(false);
-
-async function login() {
-
-
-
-try {
-
-  setLoading(true);
-
-  const formData =
-    new URLSearchParams();
-
-  formData.append(
-    "username",
-    email
-  );
-
-  formData.append(
-    "password",
-    password
-  );
-
-  const response =
-    await fetch(
-      "http://127.0.0.1:8000/auth/login",
-      {
-        method: "POST",
-
-        headers: {
-          "Content-Type":
-            "application/x-www-form-urlencoded"
-        },
-
-        body: formData
-      }
-    );
-
-  if (!response.ok) {
-
-    alert(
-      "Invalid Email or Password"
-    );
-
-    return;
+  async function handleLogin() {
+    setError(null);
+    setLoading(true);
+    try {
+      const data = await authApi.login(email, password);
+      login(data.access_token, data.role);
+      router.push("/");
+    } catch (e) {
+      setError(
+        e instanceof ApiError
+          ? "Email or password is incorrect."
+          : "Could not sign in. Check your connection and try again."
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
-  const data =
-    await response.json();
-
-  localStorage.setItem(
-      "token",
-      data.access_token
-    );
-
-  localStorage.setItem(
-      "role",
-      data.role
-    );
-
-  window.location.href = "/";
-
-} finally {
-
-  setLoading(false);
-
-}
-
-
-}
-
-return (
-
-
-<main
-  style={{
-    minHeight: "100vh",
-    background: "#f8fafc",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center"
-  }}
->
-
-  <div
-    style={{
-      width: "420px",
-      background: "white",
-      padding: "32px",
-      borderRadius: "20px",
-      boxShadow:
-        "0 8px 24px rgba(0,0,0,0.08)"
-    }}
-  >
-
-    <h1
+  return (
+    <main
       style={{
-        textAlign: "center",
-        fontSize: "42px",
-        marginBottom: "10px",
-        background:
-          "linear-gradient(90deg,#6366f1,#8b5cf6)",
-        WebkitBackgroundClip:
-          "text",
-        color: "transparent"
+        minHeight: "100vh",
+        background: theme.color.pageBg,
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
       }}
     >
-      Welcome Back
-    </h1>
+      <div
+        style={{
+          width: "420px",
+          background: theme.color.white,
+          padding: "32px",
+          borderRadius: theme.radius.xxl,
+          boxShadow: theme.shadow.card,
+        }}
+      >
+        <h1
+          style={{
+            textAlign: "center",
+            fontSize: "42px",
+            marginBottom: "10px",
+            ...gradientText,
+          }}
+        >
+          Welcome Back
+        </h1>
 
-    <p
-      style={{
-        textAlign: "center",
-        color: "#64748b",
-        marginBottom: "30px"
-      }}
-    >
-      Login to continue
-    </p>
+        <p
+          style={{
+            textAlign: "center",
+            color: theme.color.textMuted,
+            marginBottom: "30px",
+          }}
+        >
+          Sign in to continue
+        </p>
 
-    <input
-      placeholder="Email"
-      value={email}
-      onChange={(e) =>
-        setEmail(
-          e.target.value
-        )
-      }
-      style={{
-        width: "100%",
-        padding: "14px",
-        borderRadius: "12px",
-        border: "1px solid #ddd",
-        marginBottom: "16px"
-      }}
-    />
+        <input
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+          style={inputStyle}
+        />
 
-    <input
-      type="password"
-      placeholder="Password"
-      value={password}
-      onChange={(e) =>
-        setPassword(
-          e.target.value
-        )
-      }
-      style={{
-        width: "100%",
-        padding: "14px",
-        borderRadius: "12px",
-        border: "1px solid #ddd",
-        marginBottom: "20px"
-      }}
-    />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+          style={{ ...inputStyle, marginBottom: "20px" }}
+        />
 
-    <button
-      onClick={login}
-      disabled={loading}
-      style={{
-        width: "100%",
-        background:
-          loading
-            ? "#94a3b8"
-            : "linear-gradient(90deg,#6366f1,#8b5cf6)",
-        color: "white",
-        border: "none",
-        padding: "14px",
-        borderRadius: "12px",
-        cursor: "pointer",
-        fontWeight: "bold"
-      }}
-    >
-      {
-        loading
-          ? "⏳ Logging In..."
-          : "🚀 Login"
-      }
-    </button>
+        {error && (
+          <p style={{ color: theme.color.red, marginBottom: "16px", fontSize: "14px" }}>
+            {error}
+          </p>
+        )}
 
-  </div>
+        <button
+          onClick={handleLogin}
+          disabled={loading}
+          style={{
+            width: "100%",
+            background: loading ? theme.color.textFaint : theme.gradient.primary,
+            color: "white",
+            border: "none",
+            padding: "14px",
+            borderRadius: theme.radius.lg,
+            cursor: loading ? "default" : "pointer",
+            fontWeight: "bold",
+          }}
+        >
+          {loading ? "Signing in…" : "Sign in"}
+        </button>
 
-</main>
-
-);
+        <div style={{ marginTop: "20px", textAlign: "center" }}>
+          <span style={{ color: theme.color.textMuted }}>No account yet?</span>
+          <a
+            href="/register"
+            style={{
+              marginLeft: "8px",
+              color: theme.color.primary,
+              fontWeight: "bold",
+              textDecoration: "none",
+            }}
+          >
+            Create one
+          </a>
+        </div>
+      </div>
+    </main>
+  );
 }
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "14px",
+  borderRadius: "12px",
+  border: `1px solid ${theme.color.inputBorder}`,
+  marginBottom: "16px",
+};

@@ -1,896 +1,330 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+
+import { gamesApi, uploadApi } from "@/lib/api";
+import { useAuth } from "@/lib/auth/AuthContext";
+import { usePolledGame } from "@/lib/hooks";
+import { assetUrl, ApiError } from "@/lib/http";
+import { gradientText, theme } from "@/lib/theme";
+
+import GameLogs from "@/components/GameLogs";
 
 export default function CreatePage() {
-
-const [title, setTitle] = useState("");
-const [description, setDescription] = useState("");
-
-const [loading, setLoading] = useState(false);
-
-const [logs, setLogs] =
-  useState<string[]>([]);
-
-const [result, setResult] =
-  useState<any>(null);
-
-const [file, setFile] =
-  useState<File | null>(null);
-
-const [image, setImage] =
-  useState<File | null>(null);
-
-const [video, setVideo] =
-  useState<File | null>(null);
-
-const [imagePreview,
-  setImagePreview] =
-  useState("");
-
-const [videoPreview,
-  setVideoPreview] =
-  useState("");
-
-const [uploading,
-  setUploading] =
-  useState(false);
-
-const [uploadedFileUrl,
-  setUploadedFileUrl] =
-  useState("");
-
-const [uploadedImageUrl,
-  setUploadedImageUrl] =
-  useState("");
-
-const [uploadedVideoUrl,
-  setUploadedVideoUrl] =
-  useState("");
-
-useEffect(() => {
-
-const token =
-  localStorage.getItem("token");
-
-if (!token) {
-
-  alert("Please login first");
-
-  window.location.href =
-    "/login";
-}
-
-
-}, []);
-
-useEffect(() => {
-
-  const role =
-    localStorage.getItem(
-      "role"
-    );
-
-  if (
-    role !== "creator" && role !== "admin"
-  ) {
-
-    alert(
-      "Creator only"
-    );
-
-    window.location.href =
-      "/";
-
-  }
-
-}, []);
-
-async function uploadFile() {
-
-  if (!file) return;
-
-  try {
-
-    setUploading(true);
-
-    const formData =
-      new FormData();
-
-    formData.append(
-      "file",
-      file
-    );
-
-    const response =
-      await fetch(
-        "http://127.0.0.1:8000/upload",
-        {
-          method: "POST",
-          body: formData
-        }
-      );
-
-    const data =
-      await response.json();
-
-    setUploadedFileUrl(
-      data.url
-    );
-
-    alert(
-      "Upload Success"
-    );
-
-  } catch (error) {
-
-    console.error(error);
-
-  } finally {
-
-    setUploading(false);
-
-  }
-}
-
-async function uploadImage() {
-
-  if (!image) return;
-
-  try {
-
-    const formData =
-      new FormData();
-
-    formData.append(
-      "file",
-      image
-    );
-
-    const response =
-      await fetch(
-        "http://127.0.0.1:8000/upload",
-        {
-          method: "POST",
-          body: formData
-        }
-      );
-
-    const data =
-      await response.json();
-
-    setUploadedImageUrl(
-      data.url
-    );
-
-    alert(
-      "Image Uploaded"
-    );
-
-  } catch (error) {
-
-    console.error(error);
-
-  }
-}
-
-async function uploadVideo() {
-
-  if (!video) return;
-
-  try {
-
-    const formData =
-      new FormData();
-
-    formData.append(
-      "file",
-      video
-    );
-
-    const response =
-      await fetch(
-        "http://127.0.0.1:8000/upload",
-        {
-          method: "POST",
-          body: formData
-        }
-      );
-
-    const data =
-      await response.json();
-
-    setUploadedVideoUrl(
-      data.url
-    );
-
-    alert(
-      "Video Uploaded"
-    );
-
-  } catch (error) {
-
-    console.error(error);
-
-  }
-}
-
-async function createGame() {
-
-  try {
-
-    setLoading(true);
-
-    setLogs([]);
-
-    setResult(null);
-
-    setLogs(prev => [
-      ...prev,
-      "🧠 Planner Agent Started"
-    ]);
-
-    await new Promise(
-      resolve =>
-        setTimeout(resolve, 800)
-    );
-
-    setLogs(prev => [
-      ...prev,
-      "✅ Planner Agent Finished"
-    ]);
-
-    const token =
-      localStorage.getItem(
-        "token"
-      );
-
-    if (!token) {
-
-      alert(
-        "Please login first"
-      );
-
-      window.location.href =
-        "/login";
-
+  const router = useRouter();
+  const { role, isAuthenticated, loading: authLoading } = useAuth();
+
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [createdId, setCreatedId] = useState<number | null>(null);
+
+  // 跟踪刚创建的游戏：后端异步生成，这里轮询真实状态和日志
+  const { game } = usePolledGame(createdId);
+
+  // 守卫：仅 creator / admin
+  useEffect(() => {
+    if (authLoading) return;
+    if (!isAuthenticated) {
+      router.push("/login");
+    } else if (role !== "creator" && role !== "admin") {
+      router.push("/");
+    }
+  }, [authLoading, isAuthenticated, role]);
+
+  async function createGame() {
+    if (!title.trim() || !description.trim()) {
+      setError("Add a title and a description first.");
       return;
     }
-
-    setLogs(prev => [
-      ...prev,
-      "🎨 Generator Agent Started"
-    ]);
-
-    const response =
-      await fetch(
-        "http://127.0.0.1:8000/games",
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type":
-              "application/json",
-
-            Authorization:
-              `Bearer ${token}`
-          },
-
-          body: JSON.stringify({
-            title,
-            description
-          })
-        }
+    setError(null);
+    setSubmitting(true);
+    setCreatedId(null);
+    try {
+      const created = await gamesApi.create({ title, description });
+      setCreatedId(created.id); // 轮询接管，展示真实进度
+    } catch (e) {
+      setError(
+        e instanceof ApiError ? e.message : "Couldn't start generation. Try again."
       );
-
-    const data =
-      await response.json();
-
-    setLogs(prev => [
-      ...prev,
-      "✅ Generator Agent Finished"
-    ]);
-
-    setLogs(prev => [
-      ...prev,
-      "🔍 Reviewer Agent Started"
-    ]);
-
-    await new Promise(
-      resolve =>
-        setTimeout(resolve, 500)
-    );
-
-    setLogs(prev => [
-      ...prev,
-      "✅ Reviewer Agent Passed"
-    ]);
-
-    setResult(data);
-
-  } catch (error) {
-
-    console.error(error);
-
-    setLogs(prev => [
-      ...prev,
-      "❌ Generation Failed"
-    ]);
-
-  } finally {
-
-    setLoading(false);
-
+    } finally {
+      setSubmitting(false);
+    }
   }
-}
 
-return (
+  const generating =
+    submitting || game?.status === "GENERATING" || game?.status === "PENDING";
+  const playUrl = assetUrl(game?.play_url);
 
-
-<main
-  style={{
-    minHeight: "100vh",
-    background: "#f8fafc",
-    padding: "40px"
-  }}
->
-
-  <div
-    style={{
-      maxWidth: "900px",
-      margin: "0 auto"
-    }}
-  >
-
-    <h1
-      style={{
-        fontSize: "48px",
-        fontWeight: "bold",
-        background:
-          "linear-gradient(90deg,#6366f1,#8b5cf6)",
-        WebkitBackgroundClip:
-          "text",
-        color: "transparent",
-        marginBottom: "12px"
-      }}
-    >
-      ✨ AI Game Creator
-    </h1>
-
-    <p
-      style={{
-        color: "#64748b",
-        marginBottom: "32px"
-      }}
-    >
-      Describe your idea and let
-      AI build a playable game.
-    </p>
-
-    <div
-      style={{
-        background: "white",
-        borderRadius: "20px",
-        padding: "24px",
-        boxShadow:
-          "0 8px 24px rgba(0,0,0,0.08)"
-      }}
-    >
-
-      <label>
-        Game Title
-      </label>
-
-      <input
-        placeholder="e.g. Snake Game"
-        value={title}
-        onChange={(e) =>
-          setTitle(
-            e.target.value
-          )
-        }
-        style={{
-          width: "100%",
-          padding: "14px",
-          borderRadius: "12px",
-          border:
-            "1px solid #ddd",
-          marginTop: "8px",
-          marginBottom: "20px"
-        }}
-      />
-
-      <label>
-        Game Idea
-      </label>
-
-      <textarea
-        placeholder="Describe your game..."
-        value={description}
-        onChange={(e) =>
-          setDescription(
-            e.target.value
-          )
-        }
-        style={{
-          width: "100%",
-          minHeight: "160px",
-          padding: "14px",
-          borderRadius: "12px",
-          border:
-            "1px solid #ddd",
-          marginTop: "8px"
-        }}
-      />
-
-      <div
-          style={{
-            display: "grid",
-            gridTemplateColumns:
-              "repeat(3,240px)",
-            justifyContent:"center",
-            gap: "12px",
-            marginTop: "24px"
-          }}
-        >
-
-          {/* File */}
-
-          <div
-            style={{
-              background: "#f8fafc",
-              border: "1px solid #e2e8f0",
-              borderRadius: "16px",
-              padding: "20px",
-              textAlign: "center"
-            }}
-          >
-            <div
-              style={{
-                fontSize: "32px"
-              }}
-            >
-              📄
-            </div>
-
-            <h3>Document</h3>
-
-            <input
-              id="document-upload"
-              type="file"
-              hidden
-              onChange={(e) =>
-                setFile(
-                  e.target.files?.[0] || null
-                )
-              }
-            />
-
-            <label
-              htmlFor="document-upload"
-              style={{
-                display: "inline-block",
-                marginTop: "10px",
-                padding: "8px 14px",
-                borderRadius: "8px",
-                background: "#6366f1",
-                color: "white",
-                cursor: "pointer",
-                fontSize: "14px"
-              }}
-            >
-              📄 Choose File
-            </label>
-
-            {
-              file && (
-                <p
-                  style={{
-                    marginTop: "10px",
-                    fontSize: "13px",
-                    color: "#64748b"
-                  }}
-                >
-                  {file.name}
-                </p>
-              )
-            }
-
-            <button
-              onClick={uploadFile}
-              disabled={!file || uploading}
-              style={{
-                marginTop: "12px",
-                padding: "8px 14px",
-                border: "none",
-                borderRadius: "8px",
-                background: "#2563eb",
-                color: "white",
-                cursor: "pointer"
-              }}
-            >
-              Upload
-            </button>
-
-            {
-              uploadedFileUrl && (
-                <p
-                  style={{
-                    color: "#16a34a",
-                    marginTop: "8px"
-                  }}
-                >
-                  ✅ Uploaded
-                </p>
-              )
-            }
-          </div>
-
-          {/* Image */}
-
-          <div
-            style={{
-              background: "#f8fafc",
-              border: "1px solid #e2e8f0",
-              borderRadius: "16px",
-              padding: "20px",
-              textAlign: "center"
-            }}
-          >
-            <div
-              style={{
-                fontSize: "32px"
-              }}
-            >
-              🖼
-            </div>
-
-            <h3>Image</h3>
-
-            <input
-              id="image-upload"
-              type="file"
-              accept="image/*"
-              hidden
-              onChange={(e) => {
-
-                const selected =
-                  e.target.files?.[0];
-
-                if (!selected) return;
-
-                setImage(selected);
-
-                setImagePreview(
-                  URL.createObjectURL(
-                    selected
-                  )
-                );
-              }}
-              style={{
-                marginTop: "10px"
-              }}
-            />
-            <label
-              htmlFor="image-upload"
-              style={{
-                display: "inline-block",
-                marginTop: "10px",
-                padding: "8px 14px",
-                borderRadius: "8px",
-                background: "#6366f1",
-                color: "white",
-                cursor: "pointer",
-                fontSize: "14px"
-              }}
-            >
-              🖼 Choose Image
-            </label>
-
-            {
-              imagePreview && (
-
-                <img
-                  src={imagePreview}
-                  alt="preview"
-                  style={{
-                    width: "100%",
-                    marginTop: "10px",
-                    borderRadius: "10px",
-                    maxHeight: "120px",
-                    objectFit: "cover"
-                  }}
-                />
-
-              )
-            }
-
-            <button
-              onClick={uploadImage}
-              disabled={!image}
-              style={{
-                marginTop: "12px",
-                padding: "8px 14px",
-                border: "none",
-                borderRadius: "8px",
-                background: "#2563eb",
-                color: "white",
-                cursor: "pointer"
-              }}
-            >
-              Upload
-            </button>
-
-            {
-              uploadedImageUrl && (
-                <p
-                  style={{
-                    color: "#16a34a",
-                    marginTop: "8px"
-                  }}
-                >
-                  ✅ Uploaded
-                </p>
-              )
-            }
-          </div>
-
-          {/* Video */}
-
-          <div
-            style={{
-              background: "#f8fafc",
-              border: "1px solid #e2e8f0",
-              borderRadius: "16px",
-              padding: "20px",
-              textAlign: "center"
-            }}
-          >
-            <div
-              style={{
-                fontSize: "32px"
-              }}
-            >
-              🎥
-            </div>
-
-            <h3>Video</h3>
-
-            <input
-              id="video-upload"
-              type="file"
-              accept="video/*"
-              hidden
-              onChange={(e) => {
-
-                const selected =
-                  e.target.files?.[0];
-
-                if (!selected) return;
-
-                setVideo(selected);
-
-                setVideoPreview(
-                  URL.createObjectURL(
-                    selected
-                  )
-                );
-              }}
-              style={{
-                marginTop: "10px"
-              }}
-            />
-            <label
-              htmlFor="video-upload"
-              style={{
-                display: "inline-block",
-                marginTop: "10px",
-                padding: "8px 14px",
-                borderRadius: "8px",
-                background: "#6366f1",
-                color: "white",
-                cursor: "pointer",
-                fontSize: "14px"
-              }}
-            >
-              🎥 Choose Video
-            </label>
-
-            {
-              videoPreview && (
-
-                <video
-                  controls
-                  style={{
-                    width: "100%",
-                    marginTop: "10px",
-                    borderRadius: "10px",
-                    maxHeight: "120px"
-                  }}
-                >
-                  <source
-                    src={videoPreview}
-                  />
-                </video>
-
-              )
-            }
-
-            <button
-              onClick={uploadVideo}
-              disabled={!video}
-              style={{
-                marginTop: "12px",
-                padding: "8px 14px",
-                border: "none",
-                borderRadius: "8px",
-                background: "#2563eb",
-                color: "white",
-                cursor: "pointer"
-              }}
-            >
-              Upload
-            </button>
-
-            {
-              uploadedVideoUrl && (
-                <p
-                  style={{
-                    color: "#16a34a",
-                    marginTop: "8px"
-                  }}
-                >
-                  ✅ Uploaded
-                </p>
-              )
-            }
-          </div>
-
-        </div>
+  return (
+    <main style={{ minHeight: "100vh", background: theme.color.pageBg, padding: "40px" }}>
+      <div style={{ maxWidth: "900px", margin: "0 auto" }}>
+        <h1 style={{ fontSize: "48px", fontWeight: "bold", marginBottom: "12px", ...gradientText }}>
+          ✨ AI Game Creator
+        </h1>
+        <p style={{ color: theme.color.textMuted, marginBottom: "32px" }}>
+          Describe your idea and let AI build a playable game.
+        </p>
 
         <div
           style={{
-            marginTop: "50px",
-            marginBottom: "20px",
-            textAlign: "center"
+            background: theme.color.white,
+            borderRadius: theme.radius.xxl,
+            padding: "24px",
+            boxShadow: theme.shadow.card,
           }}
         >
+          <label>Game title</label>
+          <input
+            placeholder="e.g. Snake Game"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            style={{ ...fieldStyle, marginBottom: "20px" }}
+          />
 
-          <p
-            style={{
-              color: "#64748b",
-              marginBottom: "18px",
-              fontSize: "15px"
-            }}
-          >
-            Describe your idea and let AI create a playable game
-          </p>
+          <label>Game idea</label>
+          <textarea
+            placeholder="Describe your game…"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            style={{ ...fieldStyle, minHeight: "160px" }}
+          />
 
-          <button
-            onClick={createGame}
-            disabled={loading}
-            style={{
-              width: "360px",
-              maxWidth: "100%",
-              height: "60px",
-              fontSize: "24px",
-              fontWeight: "bold",
-              border: "none",
-              borderRadius: "20px",
-              background:
-                loading
-                  ? "#94a3b8"
-                  : "linear-gradient(90deg,#6366f1,#8b5cf6)",
-              color: "white",
-              cursor: "pointer",
-              boxShadow:
-                "0 15px 35px rgba(99,102,241,0.35)"
-            }}
-          >
-            {
-              loading
-                ? "⏳ Generating Game..."
-                : "🚀 Generate Game"
-            }
-          </button>
+          <UploadGrid />
 
-        </div>
-
-    {logs.length > 0 && (
-
-      <div
-        style={{
-          marginTop: "24px",
-          background: "white",
-          borderRadius: "20px",
-          padding: "20px",
-          boxShadow:
-            "0 8px 24px rgba(0,0,0,0.08)"
-        }}
-
-
-      >
-
-        <h3
-          style={{
-            marginBottom: "16px"
-          }}
-        >
-          🤖 Agent Workflow
-        </h3>
-
-        {
-          logs.map((log, index) => (
-
-            <div
-              key={index}
+          <div style={{ marginTop: "40px", textAlign: "center" }}>
+            {error && (
+              <p style={{ color: theme.color.red, marginBottom: "16px" }}>{error}</p>
+            )}
+            <button
+              onClick={createGame}
+              disabled={generating}
               style={{
-                padding: "12px",
-                marginBottom: "10px",
-                background: "#f8fafc",
-                borderRadius: "10px",
-                border: "1px solid #e2e8f0"
+                width: "360px",
+                maxWidth: "100%",
+                height: "60px",
+                fontSize: "22px",
+                fontWeight: "bold",
+                border: "none",
+                borderRadius: theme.radius.xxl,
+                background: generating ? theme.color.textFaint : theme.gradient.primary,
+                color: "white",
+                cursor: generating ? "default" : "pointer",
+                boxShadow: theme.shadow.primary,
               }}
             >
-              {log}
+              {generating ? "⏳ Generating…" : "🚀 Generate game"}
+            </button>
+          </div>
+        </div>
+
+        {/* 真实的 agent 日志（来自后端 generation_logs），不再是假的定时器 */}
+        {game?.generation_logs && (
+          <div
+            style={{
+              marginTop: "24px",
+              background: theme.color.white,
+              borderRadius: theme.radius.xxl,
+              padding: "20px",
+              boxShadow: theme.shadow.card,
+            }}
+          >
+            <h3 style={{ marginBottom: "16px" }}>🤖 Agent workflow</h3>
+            <GameLogs logs={game.generation_logs} />
+          </div>
+        )}
+
+        {game?.status === "COMPLETED" && (
+          <div
+            style={{
+              marginTop: "24px",
+              background: theme.color.white,
+              borderRadius: theme.radius.xxl,
+              padding: "20px",
+              boxShadow: theme.shadow.card,
+            }}
+          >
+            <h2>✅ Game created</h2>
+            <p>{game.title}</p>
+            <div style={{ display: "flex", gap: "12px", marginTop: "12px" }}>
+              {playUrl && (
+                <button onClick={() => window.open(playUrl, "_blank")} style={successButtonStyle}>
+                  ▶ Play game
+                </button>
+              )}
+              <button onClick={() => router.push(`/game/${game.id}`)} style={successButtonStyle}>
+                Open details
+              </button>
             </div>
+          </div>
+        )}
 
-          ))
-        }
-
+        {game?.status === "FAILED" && (
+          <div
+            style={{
+              marginTop: "24px",
+              background: "#fef2f2",
+              borderRadius: theme.radius.xxl,
+              padding: "20px",
+            }}
+          >
+            <h2 style={{ color: theme.color.red }}>Generation failed</h2>
+            <p style={{ color: theme.color.textMuted }}>
+              Something went wrong while building this game. Edit the idea and try again.
+            </p>
+          </div>
+        )}
       </div>
-
-    )}
-      </div>
-
-    {result && (
-
-      <div
-        style={{
-          marginTop: "24px",
-          background: "white",
-          borderRadius: "20px",
-          padding: "20px",
-          boxShadow:
-            "0 8px 24px rgba(0,0,0,0.08)"
-        }}
-      >
-
-        <h2>
-          ✅ Game Created
-        </h2>
-
-        <p>
-          {result.title}
-        </p>
-
-        <button
-          style={{
-            background:
-              "linear-gradient(90deg,#10b981,#14b8a6)",
-            color: "white",
-            border: "none",
-            padding: "12px 20px",
-            borderRadius: "10px",
-            cursor: "pointer"
-          }}
-          onClick={() =>
-            window.open(
-              `http://127.0.0.1:8000${result.play_url}`
-            )
-          }
-        >
-          ▶ Play Game
-        </button>
-
-      </div>
-
-    )}
-
-  </div>
-
-</main>
-
-
-);
+    </main>
+  );
 }
+
+// 文档 / 图片 / 视频上传。这些上传走带鉴权的 uploadApi。
+function UploadGrid() {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+        gap: "12px",
+        marginTop: "24px",
+      }}
+    >
+      <UploadCard icon="📄" label="Document" accept="*" />
+      <UploadCard icon="🖼" label="Image" accept="image/*" />
+      <UploadCard icon="🎥" label="Video" accept="video/*" />
+    </div>
+  );
+}
+
+function UploadCard({
+  icon,
+  label,
+  accept,
+}: {
+  icon: string;
+  label: string;
+  accept: string;
+}) {
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string>("");
+  const [done, setDone] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function upload() {
+    if (!file) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      await uploadApi.file(file);
+      setDone(true);
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : "Upload failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const inputId = `upload-${label.toLowerCase()}`;
+
+  return (
+    <div
+      style={{
+        background: theme.color.pageBg,
+        border: `1px solid ${theme.color.border}`,
+        borderRadius: theme.radius.xl,
+        padding: "20px",
+        textAlign: "center",
+      }}
+    >
+      <div style={{ fontSize: "32px" }}>{icon}</div>
+      <h3>{label}</h3>
+
+      <input
+        id={inputId}
+        type="file"
+        accept={accept}
+        hidden
+        onChange={(e) => {
+          const selected = e.target.files?.[0] ?? null;
+          setFile(selected);
+          setDone(false);
+          if (selected && accept !== "*") {
+            setPreview(URL.createObjectURL(selected));
+          }
+        }}
+      />
+      <label htmlFor={inputId} style={chooseLabelStyle}>
+        Choose {label.toLowerCase()}
+      </label>
+
+      {preview && accept.startsWith("image") && (
+        <img
+          src={preview}
+          alt="preview"
+          style={{ width: "100%", marginTop: "10px", borderRadius: theme.radius.md, maxHeight: "120px", objectFit: "cover" }}
+        />
+      )}
+      {preview && accept.startsWith("video") && (
+        <video controls style={{ width: "100%", marginTop: "10px", borderRadius: theme.radius.md, maxHeight: "120px" }}>
+          <source src={preview} />
+        </video>
+      )}
+      {file && accept === "*" && (
+        <p style={{ marginTop: "10px", fontSize: "13px", color: theme.color.textMuted }}>
+          {file.name}
+        </p>
+      )}
+
+      <button onClick={upload} disabled={!file || busy} style={uploadButtonStyle}>
+        {busy ? "Uploading…" : "Upload"}
+      </button>
+
+      {err && <p style={{ color: theme.color.red, marginTop: "8px", fontSize: "13px" }}>{err}</p>}
+      {done && <p style={{ color: theme.color.green, marginTop: "8px" }}>✅ Uploaded</p>}
+    </div>
+  );
+}
+
+const fieldStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "14px",
+  borderRadius: theme.radius.lg,
+  border: `1px solid ${theme.color.inputBorder}`,
+  marginTop: "8px",
+  boxSizing: "border-box",
+};
+
+const chooseLabelStyle: React.CSSProperties = {
+  display: "inline-block",
+  marginTop: "10px",
+  padding: "8px 14px",
+  borderRadius: theme.radius.sm,
+  background: theme.color.primary,
+  color: "white",
+  cursor: "pointer",
+  fontSize: "14px",
+};
+
+const uploadButtonStyle: React.CSSProperties = {
+  marginTop: "12px",
+  padding: "8px 14px",
+  border: "none",
+  borderRadius: theme.radius.sm,
+  background: "#2563eb",
+  color: "white",
+  cursor: "pointer",
+};
+
+const successButtonStyle: React.CSSProperties = {
+  background: theme.gradient.success,
+  color: "white",
+  border: "none",
+  padding: "12px 20px",
+  borderRadius: theme.radius.md,
+  cursor: "pointer",
+  fontWeight: "bold",
+};

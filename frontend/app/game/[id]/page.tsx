@@ -1,357 +1,190 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+
+import { gamesApi } from "@/lib/api";
+import { useAuth } from "@/lib/auth/AuthContext";
+import { usePolledGame } from "@/lib/hooks";
+import { assetUrl } from "@/lib/http";
+import { STATUS_META, theme } from "@/lib/theme";
+
 import TagList from "@/components/TagList";
 
-
 export default function GameDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const id = (params?.id as string) ?? null;
 
-    const params = useParams();
+  const { game, error, setGame } = usePolledGame(id);
+  const { isAuthenticated } = useAuth();
 
-    const [game, setGame] = useState<any>(null);
+  async function refresh() {
+    if (id) setGame(await gamesApi.get(id));
+  }
 
-    useEffect(() => {
+  async function like() {
+    if (!isAuthenticated) return router.push("/login");
+    await gamesApi.like(id!);
+    refresh();
+  }
 
+  async function favorite() {
+    if (!isAuthenticated) return router.push("/login");
+    await gamesApi.favorite(id!);
+    refresh();
+  }
 
-    if (params?.id) {
-      loadGame();
+  async function play() {
+    try {
+      await gamesApi.play(id!);
+    } finally {
+      const url = assetUrl(game?.play_url);
+      if (url) window.open(url, "_blank");
+      refresh();
     }
+  }
 
-
-    }, [params]);
-
-    async function loadGame() {
-
-
-    const response = await fetch(
-      `http://127.0.0.1:8000/games/${params.id}`
+  if (error) {
+    return (
+      <CenteredMessage>
+        <h2>Couldn't load this game</h2>
+        <p style={{ color: theme.color.textMuted }}>{error}</p>
+        <button onClick={() => router.push("/")} style={backButtonStyle}>
+          ← Back home
+        </button>
+      </CenteredMessage>
     );
+  }
 
-    const data = await response.json();
+  if (!game) {
+    return (
+      <CenteredMessage>
+        <h2>Loading…</h2>
+      </CenteredMessage>
+    );
+  }
 
-    setGame(data);
+  const cover = assetUrl(game.cover_url) ?? "https://placehold.co/1200x400";
+  const playUrl = assetUrl(game.play_url);
 
-
-    }
-
-    async function likeGame() {
-
-      const token =
-        localStorage.getItem(
-          "token"
-        );
-
-      await fetch(
-        `http://127.0.0.1:8000/games/${params.id}/like`,
-        {
-          method: "POST",
-          headers: {
-            Authorization:
-              `Bearer ${token}`
-          }
-        }
-      );
-
-      loadGame();
-    }
-
-    async function favoriteGame() {
-
-      const token =
-        localStorage.getItem(
-          "token"
-        );
-
-      await fetch(
-        `http://127.0.0.1:8000/games/${params.id}/favorite`,
-        {
-          method: "POST",
-          headers: {
-            Authorization:
-              `Bearer ${token}`
-          }
-        }
-      );
-
-      loadGame();
-}
-
-if (!game) {
-
-
-return (
-  <main
-    style={{
-      minHeight: "100vh",
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-      background: "#f8fafc"
-    }}
-  >
-    <h2>Loading...</h2>
-  </main>
-);
-
-
-}
-
-return (
-
-
-<main
-  style={{
-    minHeight: "100vh",
-    background:
-      "linear-gradient(135deg,#f8fafc,#eef2ff)",
-    padding: "40px"
-  }}
->
-
-  <div
-    style={{
-      maxWidth: "1200px",
-      margin: "0 auto",
-      position: "relative"
-    }}
-  >
-
-    <button
-      onClick={() =>
-        window.location.href = "/"
-      }
-      style={{
-        position: "absolute",
-        top: "360px",
-        right: "32px",
-
-        padding: "10px 18px",
-
-        border: "none",
-
-        borderRadius: "10px",
-
-        background:
-          "linear-gradient(90deg,#6366f1,#8b5cf6)",
-
-        color: "white",
-
-        boxShadow:
-          "0 6px 16px rgba(99,102,241,0.35)",
-
-        cursor: "pointer",
-
-        fontWeight: "600",
-
-        zIndex: 10
-      }}
-    >
-      ← Back
-    </button>
-
-    <div
-      style={{
-        background: "white",
-        borderRadius: "24px",
-        overflow: "hidden",
-        boxShadow:
-          "0 10px 30px rgba(0,0,0,0.08)"
-      }}
-    >
-
-      <img
-        src={
-            game.cover_url
-              ? `http://127.0.0.1:8000${game.cover_url}`
-              : "https://placehold.co/1200x400"
-          }
-        alt={game.title}
-        style={{
-          width: "100%",
-          height: "320px",
-          objectFit: "cover"
-        }}
-      />
-
-      <div
-        style={{
-          padding: "32px"
-        }}
-      >
-
-        <h1
-          style={{
-            fontSize: "42px",
-            marginBottom: "10px"
-          }}
-        >
-          🎮 {game.title}
-        </h1>
-
-        <p
-          style={{
-            color: "#64748b",
-            marginBottom: "16px"
-          }}
-        >
-          By {game.author || "AI Creator"}
-        </p>
-
-        <p
-          style={{
-            fontSize: "18px",
-            lineHeight: "1.8",
-            marginBottom: "24px"
-          }}
-        >
-          {game.description}
-        </p>
-
-        <TagList tags={game.tags} />
+  return (
+    <main style={{ minHeight: "100vh", background: theme.color.pageGradient, padding: "40px" }}>
+      <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+        <button onClick={() => router.push("/")} style={{ ...backButtonStyle, marginBottom: "20px" }}>
+          ← Back
+        </button>
 
         <div
           style={{
-            marginTop: "18px",
-            marginBottom: "18px",
-            fontWeight: "bold",
-            fontSize: "18px"
+            background: theme.color.white,
+            borderRadius: "24px",
+            overflow: "hidden",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
           }}
         >
-          {
-            game.status === "COMPLETED"
-              ? "🟢 COMPLETED"
-              : game.status === "GENERATING"
-              ? "🟡 GENERATING"
-              : "🔴 FAILED"
-          }
-        </div>
+          <img
+            src={cover}
+            alt={game.title}
+            style={{ width: "100%", height: "320px", objectFit: "cover" }}
+          />
 
-        <div
-          style={{
-            marginTop: "16px"
-          }}
-        >
-          <div
-            style={{
-              color: "#f59e0b",
-              fontWeight: "700",
-              fontSize: "18px"
-            }}
-          >
-            🔥 {game.play_count || 0} Plays
-          </div>
+          <div style={{ padding: "32px" }}>
+            <h1 style={{ fontSize: "42px", marginBottom: "10px" }}>🎮 {game.title}</h1>
+            <p style={{ color: theme.color.textMuted, marginBottom: "16px" }}>
+              By {game.author || "AI Creator"}
+            </p>
+            <p style={{ fontSize: "18px", lineHeight: 1.8, marginBottom: "24px" }}>
+              {game.description}
+            </p>
 
-          <div
-            style={{
-              display: "flex",
-              gap: "24px",
-              marginTop: "12px",
-              fontWeight: "600"
-            }}
-          >
-            <span
-              onClick={likeGame}
-              style={{
-                cursor: "pointer",
-                color:
-                  game.liked
-                    ? "#ef4444"
-                    : "#64748b"
-              }}
-            >
-              ❤️ {game.like_count || 0}
-            </span>
+            <TagList tags={game.tags} />
 
-            <span
-              onClick={favoriteGame}
-              style={{
-                cursor: "pointer",
-                color:
-                  game.favorited
-                    ? "#f59e0b"
-                    : "#64748b"
-              }}
-            >
-              ⭐ {game.favorite_count || 0}
-            </span>
+            <div style={{ marginTop: "18px", marginBottom: "18px", fontWeight: "bold", fontSize: "18px" }}>
+              {(STATUS_META[game.status] ?? STATUS_META.PENDING).label}
+            </div>
+
+            <div style={{ color: theme.color.amber, fontWeight: 700, fontSize: "18px" }}>
+              🔥 {game.play_count} plays
+            </div>
+
+            <div style={{ display: "flex", gap: "24px", marginTop: "12px", fontWeight: 600 }}>
+              <span onClick={like} style={{ cursor: "pointer", color: game.liked ? theme.color.red : theme.color.textMuted }}>
+                ❤️ {game.like_count}
+              </span>
+              <span onClick={favorite} style={{ cursor: "pointer", color: game.favorited ? theme.color.amber : theme.color.textMuted }}>
+                ⭐ {game.favorite_count}
+              </span>
+            </div>
+
+            {game.status === "GENERATING" ? (
+              <p style={{ marginTop: "32px", color: theme.color.textMuted }}>
+                ⏳ This game is still being generated. The preview will appear automatically when it's ready.
+              </p>
+            ) : playUrl ? (
+              <>
+                <h2 style={{ margin: "32px 0 16px" }}>🎮 Live preview</h2>
+                <iframe
+                  src={playUrl}
+                  style={{
+                    width: "100%",
+                    height: "700px",
+                    border: "none",
+                    borderRadius: theme.radius.xxl,
+                    background: "white",
+                    boxShadow: theme.shadow.card,
+                  }}
+                />
+                <div style={{ textAlign: "center", marginTop: "32px" }}>
+                  <button onClick={play} style={bigPlayButtonStyle}>
+                    ▶ Play game
+                  </button>
+                </div>
+              </>
+            ) : null}
           </div>
         </div>
-
-        <h2
-          style={{
-            marginBottom: "16px"
-          }}
-        >
-          🎮 Live Preview
-        </h2>
-
-        <iframe
-          src={
-            `http://127.0.0.1:8000${game.play_url}`
-          }
-          style={{
-            width: "100%",
-            height: "700px",
-            border: "none",
-            borderRadius: "20px",
-            background: "white",
-            boxShadow:
-              "0 8px 24px rgba(0,0,0,0.08)"
-          }}
-        />
-
-        <div
-          style={{
-            textAlign: "center",
-            marginTop: "32px"
-          }}
-        >
-
-          <button
-            onClick={async () => {
-              await fetch(
-                `http://127.0.0.1:8000/games/${game.id}/play`,
-                {
-                  method: "POST"
-                }
-              );
-
-              window.open(
-                `http://127.0.0.1:8000${game.play_url}`,
-                "_blank"
-              );
-
-              loadGame();
-            }}
-            style={{
-              width: "280px",
-              height: "70px",
-              border: "none",
-              borderRadius: "18px",
-              background:
-                "linear-gradient(90deg,#6366f1,#8b5cf6)",
-              color: "white",
-              fontSize: "22px",
-              fontWeight: "bold",
-              cursor: "pointer",
-              boxShadow:
-                "0 10px 25px rgba(99,102,241,0.35)"
-            }}
-          >
-            ▶ Play Game
-          </button>
-
-        </div>
-
       </div>
-
-    </div>
-
-  </div>
-
-</main>
-
-);
-
+    </main>
+  );
 }
+
+function CenteredMessage({ children }: { children: React.ReactNode }) {
+  return (
+    <main
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center",
+        gap: "12px",
+        background: theme.color.pageBg,
+      }}
+    >
+      {children}
+    </main>
+  );
+}
+
+const backButtonStyle: React.CSSProperties = {
+  padding: "10px 18px",
+  border: "none",
+  borderRadius: theme.radius.md,
+  background: theme.gradient.primary,
+  color: "white",
+  cursor: "pointer",
+  fontWeight: 600,
+};
+
+const bigPlayButtonStyle: React.CSSProperties = {
+  width: "280px",
+  height: "70px",
+  border: "none",
+  borderRadius: "18px",
+  background: theme.gradient.primary,
+  color: "white",
+  fontSize: "22px",
+  fontWeight: "bold",
+  cursor: "pointer",
+  boxShadow: theme.shadow.primary,
+};
