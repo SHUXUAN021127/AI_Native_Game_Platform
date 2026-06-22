@@ -1,11 +1,7 @@
 """应用入口。
 
-修复点：
-- CORS 用配置里的具体来源，不再 allow_origins=["*"] 配 credentials=True
-  （那个组合浏览器会直接拒绝）；
-- 静态目录全部用 settings 里的绝对路径挂载，不再 storage 与 ../storage
-  混用；
-- 去掉重复的 User/Game.metadata.create_all。
+修复点（第 2 批）：CORS 用具体来源；静态目录用绝对路径；去掉重复 create_all。
+本次新增：注册 admin 路由。
 """
 
 from fastapi import FastAPI
@@ -15,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 import models  # noqa: F401  确保所有模型被注册到 Base.metadata
 from config import settings
 from database.db import Base, engine
+from routers.admin import router as admin_router
 from routers.auth import router as auth_router
 from routers.game import router as game_router
 from routers.upload import router as upload_router
@@ -41,6 +38,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(game_router)
 app.include_router(upload_router)
+app.include_router(admin_router)
 
 app.mount(
     "/games-files",

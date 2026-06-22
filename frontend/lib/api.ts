@@ -2,6 +2,7 @@
 
 import { apiFetch } from "@/lib/http";
 import type {
+  AdminUser,
   CreateGamePayload,
   Game,
   Role,
@@ -12,7 +13,6 @@ import type {
 // ---------- 认证 ----------
 export const authApi = {
   login(email: string, password: string): Promise<TokenResponse> {
-    // 后端用 OAuth2 表单（username/password），不是 JSON
     const body = new URLSearchParams();
     body.append("username", email);
     body.append("password", password);
@@ -23,11 +23,7 @@ export const authApi = {
     });
   },
 
-  register(
-    email: string,
-    password: string,
-    role: Role
-  ): Promise<UserPublic> {
+  register(email: string, password: string, role: Role): Promise<UserPublic> {
     return apiFetch<UserPublic>("/auth/register", {
       method: "POST",
       body: { email, password, role },
@@ -73,6 +69,22 @@ export const uploadApi = {
       body: fd,
     });
   },
+};
+
+// ---------- 管理后台（仅 admin）----------
+export const adminApi = {
+  listUsers: () => apiFetch<AdminUser[]>("/admin/users", { method: "GET" }),
+  setUserRole: (id: number, role: Role) =>
+    apiFetch<AdminUser>(`/admin/users/${id}/role`, {
+      method: "PATCH",
+      body: { role },
+    }),
+  deleteUser: (id: number) =>
+    apiFetch<{ message: string }>(`/admin/users/${id}`, { method: "DELETE" }),
+  listGames: () => apiFetch<Game[]>("/admin/games", { method: "GET" }),
+  // 删除游戏复用通用接口（后端已允许 admin 删任意游戏）
+  deleteGame: (id: number) =>
+    apiFetch<{ message: string }>(`/games/${id}`, { method: "DELETE" }),
 };
 
 // 向后兼容：旧首页仍 `import { getGames } from "../lib/api"`

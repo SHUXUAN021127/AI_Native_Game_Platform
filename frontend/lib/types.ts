@@ -30,6 +30,15 @@ export interface UserPublic {
   created_at: string;
 }
 
+// admin 后台的用户行
+export interface AdminUser {
+  id: number;
+  email: string;
+  role: Role;
+  created_at: string;
+  game_count: number;
+}
+
 export interface TokenResponse {
   access_token: string;
   token_type: string;
