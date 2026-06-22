@@ -2,6 +2,7 @@
 
 // 首页列表和 my-games 共用的卡片。展示部分统一，操作按钮通过 actions 传入。
 
+import { formatDateTime } from "@/lib/format";
 import { assetUrl } from "@/lib/http";
 import { theme } from "@/lib/theme";
 import type { Game } from "@/lib/types";
@@ -91,6 +92,10 @@ export default function GameCard({
             ⭐ {game.favorite_count}
           </span>
         </div>
+
+        <p style={{ margin: 0, fontSize: "12px", color: theme.color.textFaint }}>
+          🕒 Created {formatDateTime(game.created_at)}
+        </p>
 
         {actions && (
           <div style={{ display: "flex", gap: "10px", marginTop: "auto", paddingTop: "12px" }}>
