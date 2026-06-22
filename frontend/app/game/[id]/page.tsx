@@ -146,6 +146,45 @@ export default function GameDetailPage() {
               🕒 Created {formatDateTime(game.created_at)}
             </p>
 
+            {game.controls && (game.controls.notes || game.controls.keys.length > 0) && (
+              <div
+                style={{
+                  marginTop: "20px",
+                  padding: "16px",
+                  borderRadius: theme.radius.lg,
+                  background: theme.color.pageBg,
+                  border: `1px solid ${theme.color.border}`,
+                }}
+              >
+                <div style={{ fontWeight: 700, marginBottom: "8px" }}>🎮 How to play</div>
+                {game.controls.notes && (
+                  <p style={{ margin: "0 0 10px", color: theme.color.textMuted }}>
+                    {game.controls.notes}
+                  </p>
+                )}
+                {game.controls.keys.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                    {game.controls.keys.map((k) => (
+                      <kbd
+                        key={k}
+                        style={{
+                          padding: "4px 10px",
+                          borderRadius: theme.radius.sm,
+                          border: `1px solid ${theme.color.border}`,
+                          background: "white",
+                          fontSize: "13px",
+                          fontFamily: "monospace",
+                          boxShadow: "0 1px 0 rgba(0,0,0,0.08)",
+                        }}
+                      >
+                        {k === " " || k === "Space" ? "Space" : k}
+                      </kbd>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* 试玩区 */}
             <div style={{ marginTop: "28px" }}>
               <div style={{ display: "flex", alignItems: "center", marginBottom: "12px" }}>

@@ -1,7 +1,6 @@
 "use client";
 
-// 视觉与原版一致，只把登录状态逻辑换成 useAuth：
-// 不再 setInterval 每秒轮询 localStorage，也不再手动 atob 解 token。
+// 视觉与原版一致，登录状态用 useAuth；admin 角色多一个 Admin 入口。
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -65,6 +64,8 @@ export default function Navbar() {
           <Link href="/my-games">My Games</Link>
 
           <Link href="/history">📜 History</Link>
+
+          {role === "admin" && <Link href="/admin">🛠 Admin</Link>}
 
           {isAuthenticated ? (
             <>

@@ -14,6 +14,8 @@ interface GameCardProps {
   game: Game;
   showCover?: boolean;
   actions?: React.ReactNode;
+  onTagClick?: (tag: string) => void;
+  activeTag?: string | null;
 }
 
 const PLACEHOLDER_COVER = "https://placehold.co/400x250";
@@ -22,6 +24,8 @@ export default function GameCard({
   game,
   showCover = true,
   actions,
+  onTagClick,
+  activeTag,
 }: GameCardProps) {
   const cover = assetUrl(game.cover_url) ?? PLACEHOLDER_COVER;
 
@@ -71,7 +75,7 @@ export default function GameCard({
 
         <p style={{ margin: 0, minHeight: "40px" }}>{game.description}</p>
 
-        <TagList tags={game.tags} />
+        <TagList tags={game.tags} onTagClick={onTagClick} activeTag={activeTag} />
 
         <div
           style={{

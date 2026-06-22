@@ -1,19 +1,10 @@
-"""集中式应用配置（根目录 config.py，import 路径不变：`from config import ...`）。
-
-升级点：
-- 用 pydantic-settings 做类型校验，SECRET_KEY / OPENAI_API_KEY 缺失会在
-  启动时直接报错，而不是运行到一半才拿到 None；
-- 存储路径统一用 BASE_DIR 解析成绝对路径，跟启动目录解耦；
-- 同时保留旧的模块级常量（SECRET_KEY 等），现有代码
-  `from config import OPENAI_API_KEY` 之类无需改动。
-"""
+"""集中式应用配置（根目录 config.py，import 路径不变：`from config import ...`）。"""
 
 from functools import lru_cache
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# backend/ 目录（本文件就在 backend/config.py）
 BASE_DIR = Path(__file__).resolve().parent
 
 
@@ -25,7 +16,7 @@ class Settings(BaseSettings):
     )
 
     # --- 安全 ---
-    secret_key: str                       # 必填
+    secret_key: str
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
 
@@ -33,9 +24,14 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./game_platform.db"
 
     # --- 模型 / OpenAI ---
-    openai_api_key: str                   # 必填
+    openai_api_key: str
     model_base_url: str | None = None
     model_name: str = "gpt-5.5"
+
+    # --- 封面 ---
+    # 封面环节（尝试玩 + 截图）的总时间预算（秒）：到点就用已截到的最佳帧，
+    # 玩不起来就用第一帧，避免拖慢生成、保证用户体验有下限。
+    cover_timeout_seconds: int = 10
 
     # --- CORS（逗号分隔）---
     cors_origins: str = "http://localhost:3000"

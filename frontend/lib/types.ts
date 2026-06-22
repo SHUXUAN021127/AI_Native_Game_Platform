@@ -4,6 +4,13 @@ export type Role = "player" | "creator" | "admin";
 
 export type GameStatus = "PENDING" | "GENERATING" | "COMPLETED" | "FAILED";
 
+// 游戏控制说明（generator 产出）
+export interface GameControls {
+  start: string | null;
+  keys: string[];
+  notes: string | null;
+}
+
 export interface Game {
   id: number;
   title: string;
@@ -20,6 +27,7 @@ export interface Game {
   created_at: string | null;
   play_url: string | null;
   generation_logs: string | null;
+  controls: GameControls | null;
 }
 
 export interface UserPublic {
@@ -30,13 +38,20 @@ export interface UserPublic {
   created_at: string;
 }
 
+export interface AdminUser {
+  id: number;
+  email: string;
+  role: Role;
+  created_at: string;
+  game_count: number;
+}
+
 export interface TokenResponse {
   access_token: string;
   token_type: string;
   role: Role;
 }
 
-// 从 JWT 里解出来的当前用户
 export interface AuthUser {
   sub: string;
   email: string | null;

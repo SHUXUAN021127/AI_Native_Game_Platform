@@ -36,6 +36,8 @@ class Game(Base):
     )
     play_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     generation_logs: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # 控制说明（generator 产出的 JSON 字符串）：Cover Agent 精确驱动 + 详情页展示
+    controls: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False, index=True
     )

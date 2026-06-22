@@ -8,6 +8,31 @@ import { ApiError } from "@/lib/http";
 import type { Role } from "@/lib/types";
 import { gradientText, theme } from "@/lib/theme";
 
+// 把后端错误翻译成用户看得懂的话
+function friendlyError(e: unknown): string {
+  if (!(e instanceof ApiError)) {
+    return "Couldn't create the account. Please try again.";
+  }
+  if (e.status === 409) {
+    return "That email is already registered. Try signing in instead.";
+  }
+  if (e.status === 422) {
+    const fields = new Set<string>();
+    if (Array.isArray(e.detail)) {
+      for (const item of e.detail) {
+        const loc = (item as { loc?: unknown })?.loc;
+        if (Array.isArray(loc)) {
+          loc.forEach((l) => typeof l === "string" && fields.add(l));
+        }
+      }
+    }
+    if (fields.has("password")) return "Password must be at least 8 characters.";
+    if (fields.has("email")) return "Please enter a valid email address.";
+    return "Please check your email and password and try again.";
+  }
+  return "Couldn't create the account. Please try again.";
+}
+
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,22 +42,30 @@ export default function RegisterPage() {
 
   const router = useRouter();
 
+  // 提交前先在本地挡一道，避免让用户吃后端的原始报错
+  function validate(): string | null {
+    if (!email.trim()) return "Enter your email address.";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return "Please enter a valid email address.";
+    }
+    if (password.length < 8) return "Password must be at least 8 characters.";
+    return null;
+  }
+
   async function handleRegister() {
+    const localError = validate();
+    if (localError) {
+      setError(localError);
+      return;
+    }
+
     setError(null);
     setLoading(true);
     try {
       await authApi.register(email, password, role);
       router.push("/login");
     } catch (e) {
-      if (e instanceof ApiError) {
-        setError(
-          e.status === 409
-            ? "That email is already registered."
-            : e.message || "Could not create the account."
-        );
-      } else {
-        setError("Could not create the account. Try again.");
-      }
+      setError(friendlyError(e));
     } finally {
       setLoading(false);
     }
@@ -90,6 +123,7 @@ export default function RegisterPage() {
           placeholder="Password (at least 8 characters)"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleRegister()}
           style={inputStyle}
         />
 
