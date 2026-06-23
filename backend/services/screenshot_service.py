@@ -81,7 +81,10 @@ def capture_gameplay(
     play_keys = [k for k in (controls or {}).get("keys", []) if k] or BLIND_NUDGE_KEYS
 
     with sync_playwright() as p:
-        browser = p.chromium.launch()
+        # 容器里以 root 运行 Chromium 必须加这些参数，否则启动失败
+        browser = p.chromium.launch(
+            args=["--no-sandbox", "--disable-dev-shm-usage"]
+        )
         page = browser.new_page(viewport={"width": 1280, "height": 720})
 
         _safe(lambda: page.goto(game_url, timeout=GOTO_TIMEOUT_MS))

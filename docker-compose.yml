@@ -1,0 +1,28 @@
+# 放在项目根目录（ai_native_platform/），命名为 docker-compose.yml
+# 一条命令启动前后端：docker compose up --build
+
+services:
+  backend:
+    build: ./backend
+    env_file:
+      - ./backend/.env
+    ports:
+      - "8000:8000"
+    volumes:
+      # 持久卷：数据库 + 生成的游戏/封面/上传都在这里，容器重建也不丢
+      - backend_storage:/app/storage
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # 浏览器会用这个地址访问后端 —— 必须是你电脑能访问的地址（localhost），
+        # 不能用 compose 服务名 backend（那个只有容器之间能解析）
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  backend_storage:

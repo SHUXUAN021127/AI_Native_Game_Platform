@@ -1,0 +1,13 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+.env
+*.db
+*.sqlite3
+storage/generated_games/
+storage/covers/
+storage/uploads/
+storage/temp/
+.pytest_cache/
+*.md
